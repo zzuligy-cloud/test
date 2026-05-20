@@ -154,6 +154,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:mon
   <div class="ab-row">
     <button class="btn btn-amber" id="btn-fix" style="flex:none;padding:6px 12px;font-size:12px">↺ 尝试修复（重启流）</button>
     <button class="btn btn-green" id="btn-test-crop" style="flex:none;padding:6px 12px;font-size:12px">✂ 测试 captureFrame</button>
+    <button class="btn btn-blue" id="btn-fix-advanced" style="flex:none;padding:6px 12px;font-size:12px">↺ Advanced 分步获取</button>
   </div>
 </div>
 
@@ -229,6 +230,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:mon
 const video = document.getElementById('video')
 let stream = null
 let orientationRetried = false
+let advancedFixRetried = false
 let rafId = null
 let vcTabActive = 'video'
 let vcTimer = null
@@ -297,6 +299,7 @@ function stopCamera(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   video.srcObject=null
   orientationRetried=false
+  advancedFixRetried=false
   document.getElementById('btn-stop').disabled=true
   updateBadges()
   log('摄像头已停止','dim')
@@ -340,6 +343,84 @@ async function fixOrientation(){
   await new Promise(r=>setTimeout(r,300))
   log('等待完毕，重新 getUserMedia…','warn')
   await startCamera()
+}
+
+// ─── fix: advanced 分步获取（参考 adaptiveResolution.ts） ──
+// 思路：先用最简约束拿到基础流（让 iOS 以正确方向初始化），
+// 再用 applyConstraints + advanced 多个 exact 预设（浏览器从上到下取第一个支持的），
+// 对比 startCamera 的 getUserMedia ideal 方式，看能否规避方向 bug
+const RESOLUTION_PRESETS = [
+  {width:{exact:1920},height:{exact:1080}}, // 16:9 Full HD
+  {width:{exact:1080},height:{exact:1920}}, // 16:9 Full HD
+  {width:{exact:1920},height:{exact:1440}}, // 4:3
+  {width:{exact:1280},height:{exact:720}},  // 16:9 HD
+  {width:{exact:1280},height:{exact:960}},  // 4:3
+  {width:{exact:960}, height:{exact:720}},  // 4:3
+  {width:{exact:640}, height:{exact:480}},  // 4:3 VGA
+  {width:{exact:640}, height:{exact:360}},  // 16:9
+]
+
+async function fixWithAdvancedConstraints(){
+  if(advancedFixRetried){log('Advanced 修复已尝试过，跳过','warn');return}
+  advancedFixRetried=true
+  log('⚡ [Advanced] 停止当前流…','warn')
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  video.srcObject=null
+  await new Promise(r=>setTimeout(r,300))
+
+  log('⚡ [Advanced] Step1: getUserMedia 基础约束（仅 facingMode）…','warn')
+  let s
+  try{
+    s = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}},
+      audio:false
+    })
+  }catch(e){
+    log(`✗ [Advanced] Step1 getUserMedia 失败: ${e.name} — ${e.message}`,'err')
+    return
+  }
+  const track = s.getVideoTracks()[0]
+  const s1 = track.getSettings()
+  log(`  Step1 拿到流: ${s1.width}×${s1.height} facing=${s1.facingMode}`,'info')
+
+  // 打印 capabilities，方便对照哪个 exact 预设会被选中
+  try{
+    const caps = track.getCapabilities?.()
+    if(caps?.width && caps?.height){
+      log(`  capabilities: width ${caps.width.min}–${caps.width.max}  height ${caps.height.min}–${caps.height.max}`,'dim')
+    }
+  }catch(_){}
+
+  log(`⚡ [Advanced] Step2: applyConstraints advanced [${RESOLUTION_PRESETS.length} exact 预设]…`,'warn')
+  log(`  预设列表: ${RESOLUTION_PRESETS.map(p=>`${p.width.exact}×${p.height.exact}`).join(', ')}`,'dim')
+  try{
+    await track.applyConstraints({advanced: RESOLUTION_PRESETS})
+    const s2 = track.getSettings()
+    log(`  Step2 成功: ${s2.width}×${s2.height} facing=${s2.facingMode}`,'ok')
+  }catch(e){
+    log(`  Step2 applyConstraints 失败(${e.name}): ${e.message}`,'warn')
+    // fallback: ideal，永远不抛异常
+    try{
+      await track.applyConstraints({width:{ideal:1920},height:{ideal:1080}})
+      const sf = track.getSettings()
+      log(`  Step2 fallback ideal: ${sf.width}×${sf.height}`,'warn')
+    }catch(_){}
+  }
+
+  stream = s
+  video.srcObject = s
+  document.getElementById('btn-stop').disabled = false
+  startRaf()
+
+  // 等 loadedmetadata 后输出最终诊断
+  const check=()=>{
+    const vw=video.videoWidth, vh=video.videoHeight
+    const rect=video.getBoundingClientRect()
+    const hasBug=vw>vh&&rect.height>rect.width
+    log(`  最终 videoWidth=${vw} videoHeight=${vh} bug=${hasBug?'⚠ 仍然反转':'✓ 已修复'}`
+      ,hasBug?'err':'ok')
+  }
+  video.addEventListener('loadedmetadata',check,{once:true})
 }
 
 // ─── captureFrame math (mirrors functions.ts) ─────────────
@@ -596,6 +677,7 @@ document.getElementById('btn-log').addEventListener('click',toggleLog)
 document.getElementById('btn-vc').addEventListener('click',toggleVC)
 document.getElementById('btn-crop-open').addEventListener('click',doCaptureTest)
 document.getElementById('btn-fix').addEventListener('click',fixOrientation)
+document.getElementById('btn-fix-advanced').addEventListener('click',fixWithAdvancedConstraints)
 document.getElementById('btn-test-crop').addEventListener('click',doCaptureTest)
 document.getElementById('btn-close-crop').addEventListener('click',()=>{
   document.getElementById('crop-modal').style.display='none'
