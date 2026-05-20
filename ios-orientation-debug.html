@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>iOS 16 Camera Orientation Debug</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #111; color: #eee; font-family: monospace; font-size: 13px; }
+
+    #app { display: flex; flex-direction: column; height: 100dvh; }
+
+    /* ── video section ── */
+    #video-wrap {
+      position: relative;
+      flex: 0 0 50%;
+      background: #000;
+      overflow: hidden;
+    }
+    video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── status overlay ── */
+    #status-overlay {
+      position: absolute; top: 8px; left: 8px; right: 8px;
+      display: flex; flex-direction: column; gap: 4px;
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(0,0,0,.7); border-radius: 6px;
+      padding: 4px 8px; font-size: 12px; width: fit-content;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-ok  { background: #22c55e; }
+    .dot-err { background: #ef4444; }
+    .dot-warn{ background: #f59e0b; }
+    .dot-gray{ background: #6b7280; }
+
+    /* ── controls ── */
+    #controls {
+      display: flex; gap: 8px; padding: 8px;
+      background: #1a1a1a; flex-wrap: wrap;
+    }
+    button {
+      flex: 1; min-width: 100px;
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 6px; padding: 8px 12px;
+      font-family: monospace; font-size: 13px; cursor: pointer;
+    }
+    button:active { opacity: .8; }
+    button.danger { background: #dc2626; }
+    button.warn   { background: #d97706; }
+
+    /* ── log panel ── */
+    #log-panel {
+      flex: 1; overflow-y: auto;
+      padding: 8px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .log-entry {
+      display: flex; gap: 6px; align-items: flex-start;
+    }
+    .log-time { color: #6b7280; flex-shrink: 0; }
+    .log-msg  { flex: 1; word-break: break-all; line-height: 1.4; }
+    .log-ok   { color: #4ade80; }
+    .log-err  { color: #f87171; }
+    .log-warn { color: #fbbf24; }
+    .log-info { color: #93c5fd; }
+    .log-dim  { color: #9ca3af; }
+
+    /* ── snapshot row ── */
+    #snapshot-row {
+      display: flex; gap: 8px; padding: 8px;
+      background: #1a1a1a; overflow-x: auto;
+    }
+    .snapshot-item {
+      flex-shrink: 0; text-align: center;
+    }
+    .snapshot-item canvas {
+      display: block; border: 1px solid #374151; border-radius: 4px;
+      width: 80px; height: 80px; object-fit: contain; background: #000;
+    }
+    .snapshot-label {
+      font-size: 10px; color: #9ca3af; margin-top: 2px; max-width: 80px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- video -->
+  <div id="video-wrap">
+    <video id="video" autoplay muted playsinline webkit-playsinline></video>
+    <div id="status-overlay">
+      <div class="badge" id="badge-dims">
+        <span class="dot dot-gray" id="dot-dims"></span>
+        <span id="text-dims">等待摄像头…</span>
+      </div>
+      <div class="badge" id="badge-bug" style="display:none">
+        <span class="dot dot-err"></span>
+        <span id="text-bug">⚠ iOS 方向 Bug 检测到</span>
+      </div>
+      <div class="badge" id="badge-display">
+        <span class="dot dot-gray" id="dot-display"></span>
+        <span id="text-display">display: —</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- controls -->
+  <div id="controls">
+    <button id="btn-start">▶ 启动摄像头</button>
+    <button id="btn-stop" class="danger" disabled>■ 停止</button>
+    <button id="btn-retry" class="warn" disabled>↺ 重新请求流</button>
+    <button id="btn-snapshot">📷 截图</button>
+  </div>
+
+  <!-- snapshots -->
+  <div id="snapshot-row"></div>
+
+  <!-- log -->
+  <div id="log-panel"></div>
+</div>
+
+<script>
+  const video    = document.getElementById('video')
+  const logPanel = document.getElementById('log-panel')
+  const btnStart = document.getElementById('btn-start')
+  const btnStop  = document.getElementById('btn-stop')
+  const btnRetry = document.getElementById('btn-retry')
+  const btnSnap  = document.getElementById('btn-snapshot')
+  const badgeBug = document.getElementById('badge-bug')
+  const dotDims  = document.getElementById('dot-dims')
+  const textDims = document.getElementById('text-dims')
+  const dotDisp  = document.getElementById('dot-display')
+  const textDisp = document.getElementById('text-display')
+  const snapRow  = document.getElementById('snapshot-row')
+
+  let currentStream = null
+  let orientationFixed = false
+  let metadataCount = 0
+  let rafId = null
+
+  // ── logger ──────────────────────────────────────────────
+  function log(msg, level = 'info') {
+    const now = new Date()
+    const ts = now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0')
+    const entry = document.createElement('div')
+    entry.className = 'log-entry'
+    entry.innerHTML = `<span class="log-time">${ts}</span><span class="log-msg log-${level}">${msg}</span>`
+    logPanel.appendChild(entry)
+    logPanel.scrollTop = logPanel.scrollHeight
+    console.log(`[${level.toUpperCase()}] ${msg}`)
+  }
+
+  // ── status badges ────────────────────────────────────────
+  function updateBadges() {
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    const rect = video.getBoundingClientRect()
+    const dispW = Math.round(rect.width)
+    const dispH = Math.round(rect.height)
+
+    if (vw && vh) {
+      const streamIsLandscape = vw > vh
+      const displayIsPortrait  = dispH > dispW
+      const hasBug = streamIsLandscape && displayIsPortrait
+
+      dotDims.className = 'dot ' + (hasBug ? 'dot-err' : 'dot-ok')
+      textDims.textContent = `stream: ${vw}×${vh} (${streamIsLandscape ? '横' : '竖'})`
+
+      dotDisp.className = 'dot ' + (displayIsPortrait ? 'dot-ok' : 'dot-warn')
+      textDisp.textContent = `display: ${dispW}×${dispH} (${displayIsPortrait ? '竖' : '横'})`
+
+      badgeBug.style.display = hasBug ? 'flex' : 'none'
+    } else {
+      dotDims.className = 'dot dot-gray'
+      textDims.textContent = '等待摄像头…'
+    }
+  }
+
+  // ── detect iOS 16 orientation bug ───────────────────────
+  function detectOrientationBug() {
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    const rect = video.getBoundingClientRect()
+    if (!vw || !vh || !rect.width || !rect.height) return false
+    return vw > vh && rect.height > rect.width
+  }
+
+  // ── start stream ─────────────────────────────────────────
+  async function startCamera(constraints) {
+    const c = constraints || {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: false,
+    }
+
+    log(`getUserMedia 请求中… constraints: ${JSON.stringify(c.video)}`, 'info')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(c)
+      currentStream = stream
+      const track = stream.getVideoTracks()[0]
+      const settings = track.getSettings()
+      log(`✓ getUserMedia 成功`, 'ok')
+      log(`  track.getSettings(): ${settings.width}×${settings.height} @ ${settings.frameRate}fps facing=${settings.facingMode}`, 'dim')
+      video.srcObject = stream
+      btnStop.disabled  = false
+      btnRetry.disabled = false
+    } catch (e) {
+      log(`✗ getUserMedia 失败: ${e.name} — ${e.message}`, 'err')
+    }
+  }
+
+  // ── stop stream ──────────────────────────────────────────
+  function stopCamera() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null }
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop())
+      currentStream = null
+    }
+    video.srcObject = null
+    orientationFixed = false
+    metadataCount = 0
+    dotDims.className = 'dot dot-gray'
+    textDims.textContent = '已停止'
+    badgeBug.style.display = 'none'
+    btnStop.disabled  = true
+    btnRetry.disabled = true
+    log('摄像头已停止', 'dim')
+  }
+
+  // ── auto-fix: restart stream ─────────────────────────────
+  async function autoFix() {
+    if (orientationFixed) return
+    orientationFixed = true
+    log('⚡ 触发自动修复：停止流并等待 300ms 后重新请求', 'warn')
+    const prevStream = currentStream
+    if (prevStream) {
+      prevStream.getTracks().forEach(t => t.stop())
+      currentStream = null
+    }
+    await new Promise(r => setTimeout(r, 300))
+    log('300ms 等待完毕，重新调用 getUserMedia…', 'warn')
+    await startCamera()
+  }
+
+  // ── loadedmetadata ───────────────────────────────────────
+  video.addEventListener('loadedmetadata', () => {
+    metadataCount++
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    const rect = video.getBoundingClientRect()
+    const dispW = Math.round(rect.width)
+    const dispH = Math.round(rect.height)
+    const hasBug = detectOrientationBug()
+
+    log(`loadedmetadata #${metadataCount}: videoWidth=${vw} videoHeight=${vh}`, hasBug ? 'err' : 'ok')
+    log(`  display element: ${dispW}×${dispH}`, 'dim')
+
+    if (hasBug) {
+      log(`⚠ iOS 方向 Bug 检测到！stream=${vw}×${vh}(横) 但 display=${dispW}×${dispH}(竖)`, 'err')
+      log('  根因: UIProcess→WebProcess orientation IPC 消息竞争，m_deviceOrientation 为 0（Unknown）', 'warn')
+      log('  结果: VideoToolbox 旋转角 = 180°(UpsideDown) 而非 270°(Right)，宽高未交换', 'warn')
+
+      if (!orientationFixed) autoFix()
+    } else {
+      log(`✓ 方向正常 — stream 竖向 ${vw}×${vh}`, 'ok')
+    }
+
+    updateBadges()
+    startRaf()
+  })
+
+  video.addEventListener('resize', () => {
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    log(`resize 事件: videoWidth=${vw} videoHeight=${vh}`, 'info')
+    updateBadges()
+  })
+
+  video.addEventListener('play', () => log('video.play 触发', 'dim'))
+  video.addEventListener('canplay', () => log('canplay 触发', 'dim'))
+  video.addEventListener('error', e => log(`video error: ${e.message}`, 'err'))
+
+  // ── live badge update loop ────────────────────────────────
+  function startRaf() {
+    if (rafId) return
+    const tick = () => {
+      updateBadges()
+      rafId = requestAnimationFrame(tick)
+    }
+    rafId = requestAnimationFrame(tick)
+  }
+
+  // ── snapshot with orientation info ───────────────────────
+  function takeSnapshot() {
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    if (!vw || !vh) { log('无视频流，无法截图', 'err'); return }
+
+    const rect  = video.getBoundingClientRect()
+    const hasBug = detectOrientationBug()
+    const displayIsPortrait = rect.height > rect.width
+
+    // --- raw capture (直接 drawImage, 不做旋转) ---
+    const rawCanvas = document.createElement('canvas')
+    rawCanvas.width  = vw
+    rawCanvas.height = vh
+    rawCanvas.getContext('2d').drawImage(video, 0, 0)
+
+    // --- corrected capture (检测到 bug 时补旋转) ---
+    const fixCanvas = document.createElement('canvas')
+    const fixCtx = fixCanvas.getContext('2d')
+    const streamIsPortrait = vh > vw
+    if (streamIsPortrait !== displayIsPortrait) {
+      fixCanvas.width  = vh
+      fixCanvas.height = vw
+      fixCtx.translate(vh / 2, vw / 2)
+      fixCtx.rotate(displayIsPortrait ? Math.PI / 2 : -Math.PI / 2)
+      fixCtx.drawImage(video, -vw / 2, -vh / 2, vw, vh)
+    } else {
+      fixCanvas.width  = vw
+      fixCanvas.height = vh
+      fixCtx.drawImage(video, 0, 0)
+    }
+
+    // render thumbnails
+    const addThumb = (srcCanvas, label) => {
+      const item = document.createElement('div')
+      item.className = 'snapshot-item'
+      const thumb = document.createElement('canvas')
+      thumb.width  = 80; thumb.height = 80
+      const tc = thumb.getContext('2d')
+      const scale = Math.min(80 / srcCanvas.width, 80 / srcCanvas.height)
+      const dw = srcCanvas.width  * scale
+      const dh = srcCanvas.height * scale
+      tc.drawImage(srcCanvas, (80 - dw) / 2, (80 - dh) / 2, dw, dh)
+      const lbl = document.createElement('div')
+      lbl.className = 'snapshot-label'
+      lbl.textContent = label
+      item.appendChild(thumb)
+      item.appendChild(lbl)
+      snapRow.insertBefore(item, snapRow.firstChild)
+    }
+
+    addThumb(rawCanvas, `raw ${vw}×${vh}`)
+    addThumb(fixCanvas, `fixed ${fixCanvas.width}×${fixCanvas.height}`)
+
+    log(`📷 截图 raw=${vw}×${vh}  fixed=${fixCanvas.width}×${fixCanvas.height}  bug=${hasBug}`, 'info')
+  }
+
+  // ── buttons ───────────────────────────────────────────────
+  btnStart.addEventListener('click', () => startCamera())
+  btnStop .addEventListener('click', stopCamera)
+  btnRetry.addEventListener('click', () => {
+    orientationFixed = false
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop())
+      currentStream = null
+    }
+    log('手动重新请求摄像头', 'warn')
+    startCamera()
+  })
+  btnSnap.addEventListener('click', takeSnapshot)
+
+  // ── init ─────────────────────────────────────────────────
+  log('页面加载完成，点击「启动摄像头」开始', 'dim')
+  log(`UA: ${navigator.userAgent.slice(0, 80)}`, 'dim')
+  log(`screen: ${screen.width}×${screen.height}  window: ${window.innerWidth}×${window.innerHeight}`, 'dim')
+</script>
+</body>
+</html>
