@@ -1,380 +1,651 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>iOS 16 Camera Orientation Debug</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #111; color: #eee; font-family: monospace; font-size: 13px; }
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <title>iOS Camera Orientation Debug</title>
+<style>
+/* ─── reset ─────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:monospace;color:#eee}
 
-    #app { display: flex; flex-direction: column; height: 100dvh; }
+/* ─── fullscreen video ───────────────────────────── */
+#video{
+  position:fixed;inset:0;width:100%;height:100%;
+  object-fit:cover;z-index:1;
+}
 
-    /* ── video section ── */
-    #video-wrap {
-      position: relative;
-      flex: 0 0 50%;
-      background: #000;
-      overflow: hidden;
-    }
-    video {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
-    }
+/* ─── scan-frame guide (visual only) ────────────── */
+#scan-frame{
+  position:fixed;z-index:10;
+  left:5%;right:5%;
+  top:50%;transform:translateY(-50%);
+  height:32%;
+  border:2px solid rgba(250,204,21,.8);
+  border-radius:8px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.35);
+  pointer-events:none;
+}
+#scan-frame::after{
+  content:'扫描框';position:absolute;top:-22px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:rgba(250,204,21,.9);white-space:nowrap;
+}
 
-    /* ── status overlay ── */
-    #status-overlay {
-      position: absolute; top: 8px; left: 8px; right: 8px;
-      display: flex; flex-direction: column; gap: 4px;
-      pointer-events: none;
-    }
-    .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: rgba(0,0,0,.7); border-radius: 6px;
-      padding: 4px 8px; font-size: 12px; width: fit-content;
-    }
-    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .dot-ok  { background: #22c55e; }
-    .dot-err { background: #ef4444; }
-    .dot-warn{ background: #f59e0b; }
-    .dot-gray{ background: #6b7280; }
+/* ─── anomaly banner ─────────────────────────────── */
+#anomaly-banner{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(185,28,28,.93);color:#fff;
+  padding:10px 12px;display:none;
+  flex-direction:column;gap:6px;font-size:12px;
+}
+#anomaly-banner .ab-title{font-size:13px;font-weight:bold}
+#anomaly-banner .ab-row{display:flex;gap:8px;flex-wrap:wrap}
 
-    /* ── controls ── */
-    #controls {
-      display: flex; gap: 8px; padding: 8px;
-      background: #1a1a1a; flex-wrap: wrap;
-    }
-    button {
-      flex: 1; min-width: 100px;
-      background: #2563eb; color: #fff; border: none;
-      border-radius: 6px; padding: 8px 12px;
-      font-family: monospace; font-size: 13px; cursor: pointer;
-    }
-    button:active { opacity: .8; }
-    button.danger { background: #dc2626; }
-    button.warn   { background: #d97706; }
+/* ─── status badges (top-right) ──────────────────── */
+#status-bar{
+  position:fixed;top:8px;right:8px;z-index:150;
+  display:flex;flex-direction:column;gap:4px;align-items:flex-end;
+}
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(0,0,0,.65);border-radius:6px;
+  padding:3px 8px;font-size:11px;backdrop-filter:blur(4px);
+}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ok{background:#22c55e}.err{background:#ef4444}.warn{background:#f59e0b}.gray{background:#6b7280}
 
-    /* ── log panel ── */
-    #log-panel {
-      flex: 1; overflow-y: auto;
-      padding: 8px;
-      display: flex; flex-direction: column; gap: 3px;
-    }
-    .log-entry {
-      display: flex; gap: 6px; align-items: flex-start;
-    }
-    .log-time { color: #6b7280; flex-shrink: 0; }
-    .log-msg  { flex: 1; word-break: break-all; line-height: 1.4; }
-    .log-ok   { color: #4ade80; }
-    .log-err  { color: #f87171; }
-    .log-warn { color: #fbbf24; }
-    .log-info { color: #93c5fd; }
-    .log-dim  { color: #9ca3af; }
+/* ─── bottom controls ────────────────────────────── */
+#controls{
+  position:fixed;bottom:0;left:0;right:0;z-index:150;
+  padding:10px 10px calc(14px + env(safe-area-inset-bottom, 0px));
+  background:rgba(0,0,0,.88);
+  border-top:1px solid #1f2937;
+  display:flex;flex-wrap:wrap;gap:6px;
+}
+.btn{
+  flex:1;min-width:70px;
+  border:none;border-radius:6px;padding:8px 6px;
+  font-family:monospace;font-size:12px;font-weight:600;cursor:pointer;color:#fff;
+}
+.btn-blue  {background:#2563eb}
+.btn-red   {background:#dc2626}
+.btn-amber {background:#b45309}
+.btn-green {background:#15803d}
+.btn-gray  {background:#374151}
+.btn:active{opacity:.75}
 
-    /* ── snapshot row ── */
-    #snapshot-row {
-      display: flex; gap: 8px; padding: 8px;
-      background: #1a1a1a; overflow-x: auto;
-    }
-    .snapshot-item {
-      flex-shrink: 0; text-align: center;
-    }
-    .snapshot-item canvas {
-      display: block; border: 1px solid #374151; border-radius: 4px;
-      width: 80px; height: 80px; object-fit: contain; background: #000;
-    }
-    .snapshot-label {
-      font-size: 10px; color: #9ca3af; margin-top: 2px; max-width: 80px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-  </style>
+/* ─── log panel (slide-up overlay) ──────────────── */
+#log-wrap{
+  position:fixed;left:0;right:0;bottom:var(--ctrl-h,64px);z-index:120;
+  height:42vh;
+  background:rgba(10,10,10,.92);backdrop-filter:blur(6px);
+  display:none;flex-direction:column;
+  border-top:1px solid #374151;
+}
+#log-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 10px;border-bottom:1px solid #1f2937;flex-shrink:0;
+  font-size:12px;color:#9ca3af;
+}
+#log-list{flex:1;overflow-y:auto;padding:6px 8px 12px;display:flex;flex-direction:column;gap:2px}
+.le{display:flex;gap:5px;font-size:11px;line-height:1.5}
+.lt{color:#4b5563;flex-shrink:0}
+.lm{flex:1;word-break:break-all}
+.c-ok{color:#4ade80}.c-err{color:#f87171}.c-warn{color:#fbbf24}.c-info{color:#93c5fd}.c-dim{color:#9ca3af}
+
+/* ─── vConsole panel ─────────────────────────────── */
+#vc-wrap{
+  position:fixed;left:0;right:0;bottom:var(--ctrl-h,64px);z-index:130;
+  height:55vh;
+  background:rgba(10,10,10,.95);backdrop-filter:blur(6px);
+  display:none;flex-direction:column;
+  border-top:1px solid #374151;
+}
+#vc-tabs{
+  display:flex;border-bottom:1px solid #1f2937;flex-shrink:0;overflow-x:auto;
+}
+.vc-tab{
+  flex-shrink:0;padding:7px 14px;font-size:12px;color:#6b7280;cursor:pointer;
+  border-bottom:2px solid transparent;
+}
+.vc-tab.active{color:#60a5fa;border-bottom-color:#60a5fa}
+#vc-content{flex:1;overflow-y:auto;padding:8px 10px;font-size:11px;line-height:1.7}
+.vc-section{margin-bottom:10px}
+.vc-key{color:#7dd3fc}
+.vc-val{color:#d1fae5}
+.vc-val-err{color:#fca5a5}
+.vc-val-warn{color:#fde68a}
+.vc-label{color:#6b7280;font-size:10px;text-transform:uppercase;
+  letter-spacing:.05em;margin-bottom:2px;border-bottom:1px solid #1f2937;padding-bottom:2px}
+#vc-refresh{flex-shrink:0;padding:5px 10px;border-bottom:1px solid #1f2937;
+  display:flex;justify-content:space-between;align-items:center;color:#6b7280;font-size:11px}
+#vc-refresh button{background:#1f2937;border:none;color:#9ca3af;padding:2px 8px;
+  border-radius:4px;cursor:pointer;font-size:11px}
+
+/* ─── crop preview modal ─────────────────────────── */
+#crop-modal{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.92);
+  display:none;flex-direction:column;align-items:center;
+  overflow-y:auto;padding:16px 12px 80px;gap:12px;
+}
+#crop-modal h3{color:#fbbf24;font-size:13px}
+.crop-block{display:flex;flex-direction:column;gap:4px;width:100%;max-width:400px}
+.crop-block label{font-size:11px;color:#6b7280}
+.crop-block canvas{width:100%;height:auto;display:block;
+  border:1px solid #374151;border-radius:4px;background:#111}
+.crop-info{font-size:11px;color:#9ca3af;line-height:1.6;
+  background:#1f2937;border-radius:6px;padding:8px;width:100%;max-width:400px}
+#btn-close-crop{
+  position:fixed;bottom:calc(var(--ctrl-h,64px) + 8px);
+  background:#374151;border:none;color:#fff;padding:10px 24px;
+  border-radius:8px;cursor:pointer;font-size:13px;z-index:301;
+}
+</style>
 </head>
 <body>
-<div id="app">
-  <!-- video -->
-  <div id="video-wrap">
-    <video id="video" autoplay muted playsinline webkit-playsinline></video>
-    <div id="status-overlay">
-      <div class="badge" id="badge-dims">
-        <span class="dot dot-gray" id="dot-dims"></span>
-        <span id="text-dims">等待摄像头…</span>
-      </div>
-      <div class="badge" id="badge-bug" style="display:none">
-        <span class="dot dot-err"></span>
-        <span id="text-bug">⚠ iOS 方向 Bug 检测到</span>
-      </div>
-      <div class="badge" id="badge-display">
-        <span class="dot dot-gray" id="dot-display"></span>
-        <span id="text-display">display: —</span>
-      </div>
-    </div>
+
+<video id="video" autoplay muted playsinline webkit-playsinline></video>
+<div id="scan-frame"></div>
+
+<!-- anomaly banner -->
+<div id="anomaly-banner">
+  <div class="ab-title">⚠ 检测到 iOS 方向 Bug：videoWidth=1920 videoHeight=1080</div>
+  <div class="ab-row">
+    <button class="btn btn-amber" id="btn-fix" style="flex:none;padding:6px 12px;font-size:12px">↺ 尝试修复（重启流）</button>
+    <button class="btn btn-green" id="btn-test-crop" style="flex:none;padding:6px 12px;font-size:12px">✂ 测试 captureFrame</button>
   </div>
+</div>
 
-  <!-- controls -->
-  <div id="controls">
-    <button id="btn-start">▶ 启动摄像头</button>
-    <button id="btn-stop" class="danger" disabled>■ 停止</button>
-    <button id="btn-retry" class="warn" disabled>↺ 重新请求流</button>
-    <button id="btn-snapshot">📷 截图</button>
+<!-- status badges -->
+<div id="status-bar">
+  <div class="badge"><span class="dot gray" id="dot-stream"></span><span id="txt-stream">等待摄像头</span></div>
+  <div class="badge"><span class="dot gray" id="dot-disp"></span><span id="txt-disp">display: —</span></div>
+  <div class="badge"><span class="dot gray" id="dot-bug"></span><span id="txt-bug">bug: 未检测</span></div>
+</div>
+
+<!-- controls -->
+<div id="controls">
+  <button class="btn btn-blue"  id="btn-start">▶ 启动</button>
+  <button class="btn btn-red"   id="btn-stop"  disabled>■ 停止</button>
+  <button class="btn btn-gray"  id="btn-log">📋 日志</button>
+  <button class="btn btn-gray"  id="btn-vc">🔍 属性</button>
+  <button class="btn btn-gray"  id="btn-crop-open">✂ 截图</button>
+</div>
+
+<!-- log panel -->
+<div id="log-wrap">
+  <div id="log-header">
+    <span>日志 <span id="log-count" style="color:#4b5563">(0)</span></span>
+    <span style="display:flex;gap:8px">
+      <button onclick="document.getElementById('log-list').innerHTML='';logCount=0;document.getElementById('log-count').textContent='(0)'"
+        style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:11px">清空</button>
+      <button onclick="toggleLog()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px">×</button>
+    </span>
   </div>
+  <div id="log-list"></div>
+</div>
 
-  <!-- snapshots -->
-  <div id="snapshot-row"></div>
+<!-- vConsole -->
+<div id="vc-wrap">
+  <div id="vc-refresh">
+    <span id="vc-updated">—</span>
+    <span style="display:flex;gap:6px">
+      <button onclick="renderVC()">刷新</button>
+      <button onclick="toggleVC()" style="font-size:14px">×</button>
+    </span>
+  </div>
+  <div id="vc-tabs">
+    <div class="vc-tab active" data-tab="video">Video</div>
+    <div class="vc-tab" data-tab="stream">Stream</div>
+    <div class="vc-tab" data-tab="device">Device</div>
+    <div class="vc-tab" data-tab="orient">Orientation</div>
+  </div>
+  <div id="vc-content"></div>
+</div>
 
-  <!-- log -->
-  <div id="log-panel"></div>
+<!-- crop preview modal -->
+<div id="crop-modal">
+  <h3>captureFrame 截图测试</h3>
+  <div class="crop-block">
+    <label>① raw drawImage（直接画，不补偿旋转）</label>
+    <canvas id="c-raw"></canvas>
+  </div>
+  <div class="crop-block">
+    <label>② 全帧 + 旋转补偿（captureFullFrame fix）</label>
+    <canvas id="c-full"></canvas>
+  </div>
+  <div class="crop-block">
+    <label>③ captureFrame 风格裁切（扫描框区域）</label>
+    <canvas id="c-crop"></canvas>
+  </div>
+  <div class="crop-info" id="crop-info-text"></div>
+  <button id="btn-close-crop">关闭</button>
 </div>
 
 <script>
-  const video    = document.getElementById('video')
-  const logPanel = document.getElementById('log-panel')
-  const btnStart = document.getElementById('btn-start')
-  const btnStop  = document.getElementById('btn-stop')
-  const btnRetry = document.getElementById('btn-retry')
-  const btnSnap  = document.getElementById('btn-snapshot')
-  const badgeBug = document.getElementById('badge-bug')
-  const dotDims  = document.getElementById('dot-dims')
-  const textDims = document.getElementById('text-dims')
-  const dotDisp  = document.getElementById('dot-display')
-  const textDisp = document.getElementById('text-display')
-  const snapRow  = document.getElementById('snapshot-row')
+'use strict'
+// ─── state ───────────────────────────────────────────────
+const video = document.getElementById('video')
+let stream = null
+let orientationRetried = false
+let rafId = null
+let vcTabActive = 'video'
+let vcTimer = null
+let logCount = 0
 
-  let currentStream = null
-  let orientationFixed = false
-  let metadataCount = 0
-  let rafId = null
+// ─── log ─────────────────────────────────────────────────
+function log(msg, level='info'){
+  const now = new Date()
+  const ts = now.toTimeString().slice(0,8)+'.'+String(now.getMilliseconds()).padStart(3,'0')
+  const el = document.createElement('div')
+  el.className='le'
+  el.innerHTML=`<span class="lt">${ts}</span><span class="lm c-${level}">${msg}</span>`
+  const list = document.getElementById('log-list')
+  list.appendChild(el)
+  list.scrollTop=list.scrollHeight
+  logCount++
+  document.getElementById('log-count').textContent=`(${logCount})`
+  console[level==='err'?'error':level==='warn'?'warn':'log'](`[${level}] ${msg}`)
+}
 
-  // ── logger ──────────────────────────────────────────────
-  function log(msg, level = 'info') {
-    const now = new Date()
-    const ts = now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0')
-    const entry = document.createElement('div')
-    entry.className = 'log-entry'
-    entry.innerHTML = `<span class="log-time">${ts}</span><span class="log-msg log-${level}">${msg}</span>`
-    logPanel.appendChild(entry)
-    logPanel.scrollTop = logPanel.scrollHeight
-    console.log(`[${level.toUpperCase()}] ${msg}`)
-  }
+// ─── status badges ────────────────────────────────────────
+function updateBadges(){
+  const vw=video.videoWidth, vh=video.videoHeight
+  const rect=video.getBoundingClientRect()
+  const dw=Math.round(rect.width), dh=Math.round(rect.height)
 
-  // ── status badges ────────────────────────────────────────
-  function updateBadges() {
-    const vw = video.videoWidth
-    const vh = video.videoHeight
-    const rect = video.getBoundingClientRect()
-    const dispW = Math.round(rect.width)
-    const dispH = Math.round(rect.height)
+  const hasDims = vw&&vh
+  const streamLandscape = vw>vh
+  const dispPortrait = dh>dw
+  const hasBug = streamLandscape&&dispPortrait
 
-    if (vw && vh) {
-      const streamIsLandscape = vw > vh
-      const displayIsPortrait  = dispH > dispW
-      const hasBug = streamIsLandscape && displayIsPortrait
+  document.getElementById('dot-stream').className='dot '+(hasDims?(hasBug?'err':'ok'):'gray')
+  document.getElementById('txt-stream').textContent=hasDims?`stream: ${vw}×${vh} (${streamLandscape?'横':'竖'})`:'无流'
 
-      dotDims.className = 'dot ' + (hasBug ? 'dot-err' : 'dot-ok')
-      textDims.textContent = `stream: ${vw}×${vh} (${streamIsLandscape ? '横' : '竖'})`
+  document.getElementById('dot-disp').className='dot '+(dw?(dispPortrait?'ok':'warn'):'gray')
+  document.getElementById('txt-disp').textContent=dw?`display: ${dw}×${dh} (${dispPortrait?'竖':'横'})`:'display: —'
 
-      dotDisp.className = 'dot ' + (displayIsPortrait ? 'dot-ok' : 'dot-warn')
-      textDisp.textContent = `display: ${dispW}×${dispH} (${displayIsPortrait ? '竖' : '横'})`
+  document.getElementById('dot-bug').className='dot '+(hasDims?(hasBug?'err':'ok'):'gray')
+  document.getElementById('txt-bug').textContent=hasDims?(hasBug?'bug: ⚠ 宽高反转':'bug: 正常'):'bug: 未检测'
 
-      badgeBug.style.display = hasBug ? 'flex' : 'none'
-    } else {
-      dotDims.className = 'dot dot-gray'
-      textDims.textContent = '等待摄像头…'
-    }
-  }
+  document.getElementById('anomaly-banner').style.display = hasBug?'flex':'none'
+}
 
-  // ── detect iOS 16 orientation bug ───────────────────────
-  function detectOrientationBug() {
-    const vw = video.videoWidth
-    const vh = video.videoHeight
-    const rect = video.getBoundingClientRect()
-    if (!vw || !vh || !rect.width || !rect.height) return false
-    return vw > vh && rect.height > rect.width
-  }
-
-  // ── start stream ─────────────────────────────────────────
-  async function startCamera(constraints) {
-    const c = constraints || {
-      video: {
-        facingMode: { ideal: 'environment' },
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 },
-      },
-      audio: false,
-    }
-
-    log(`getUserMedia 请求中… constraints: ${JSON.stringify(c.video)}`, 'info')
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(c)
-      currentStream = stream
-      const track = stream.getVideoTracks()[0]
-      const settings = track.getSettings()
-      log(`✓ getUserMedia 成功`, 'ok')
-      log(`  track.getSettings(): ${settings.width}×${settings.height} @ ${settings.frameRate}fps facing=${settings.facingMode}`, 'dim')
-      video.srcObject = stream
-      btnStop.disabled  = false
-      btnRetry.disabled = false
-    } catch (e) {
-      log(`✗ getUserMedia 失败: ${e.name} — ${e.message}`, 'err')
-    }
-  }
-
-  // ── stop stream ──────────────────────────────────────────
-  function stopCamera() {
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null }
-    if (currentStream) {
-      currentStream.getTracks().forEach(t => t.stop())
-      currentStream = null
-    }
-    video.srcObject = null
-    orientationFixed = false
-    metadataCount = 0
-    dotDims.className = 'dot dot-gray'
-    textDims.textContent = '已停止'
-    badgeBug.style.display = 'none'
-    btnStop.disabled  = true
-    btnRetry.disabled = true
-    log('摄像头已停止', 'dim')
-  }
-
-  // ── auto-fix: restart stream ─────────────────────────────
-  async function autoFix() {
-    if (orientationFixed) return
-    orientationFixed = true
-    log('⚡ 触发自动修复：停止流并等待 300ms 后重新请求', 'warn')
-    const prevStream = currentStream
-    if (prevStream) {
-      prevStream.getTracks().forEach(t => t.stop())
-      currentStream = null
-    }
-    await new Promise(r => setTimeout(r, 300))
-    log('300ms 等待完毕，重新调用 getUserMedia…', 'warn')
-    await startCamera()
-  }
-
-  // ── loadedmetadata ───────────────────────────────────────
-  video.addEventListener('loadedmetadata', () => {
-    metadataCount++
-    const vw = video.videoWidth
-    const vh = video.videoHeight
-    const rect = video.getBoundingClientRect()
-    const dispW = Math.round(rect.width)
-    const dispH = Math.round(rect.height)
-    const hasBug = detectOrientationBug()
-
-    log(`loadedmetadata #${metadataCount}: videoWidth=${vw} videoHeight=${vh}`, hasBug ? 'err' : 'ok')
-    log(`  display element: ${dispW}×${dispH}`, 'dim')
-
-    if (hasBug) {
-      log(`⚠ iOS 方向 Bug 检测到！stream=${vw}×${vh}(横) 但 display=${dispW}×${dispH}(竖)`, 'err')
-      log('  根因: UIProcess→WebProcess orientation IPC 消息竞争，m_deviceOrientation 为 0（Unknown）', 'warn')
-      log('  结果: VideoToolbox 旋转角 = 180°(UpsideDown) 而非 270°(Right)，宽高未交换', 'warn')
-
-      if (!orientationFixed) autoFix()
-    } else {
-      log(`✓ 方向正常 — stream 竖向 ${vw}×${vh}`, 'ok')
-    }
-
-    updateBadges()
+// ─── getUserMedia ─────────────────────────────────────────
+async function startCamera(){
+  log('getUserMedia 请求中…','info')
+  try{
+    const s = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},
+      audio:false
+    })
+    stream = s
+    const track = s.getVideoTracks()[0]
+    const settings = track.getSettings()
+    log(`✓ 获取流成功  track: ${settings.width}×${settings.height} @${settings.frameRate}fps facing=${settings.facingMode}`, 'ok')
+    video.srcObject = s
+    document.getElementById('btn-stop').disabled = false
     startRaf()
-  })
+  }catch(e){
+    log(`✗ getUserMedia 失败: ${e.name} — ${e.message}`,'err')
+  }
+}
 
-  video.addEventListener('resize', () => {
-    const vw = video.videoWidth
-    const vh = video.videoHeight
-    log(`resize 事件: videoWidth=${vw} videoHeight=${vh}`, 'info')
-    updateBadges()
-  })
+function stopCamera(){
+  if(rafId){cancelAnimationFrame(rafId);rafId=null}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  video.srcObject=null
+  orientationRetried=false
+  document.getElementById('btn-stop').disabled=true
+  updateBadges()
+  log('摄像头已停止','dim')
+}
 
-  video.addEventListener('play', () => log('video.play 触发', 'dim'))
-  video.addEventListener('canplay', () => log('canplay 触发', 'dim'))
-  video.addEventListener('error', e => log(`video error: ${e.message}`, 'err'))
+// ─── live loop ────────────────────────────────────────────
+function startRaf(){
+  if(rafId)return
+  const tick=()=>{updateBadges();rafId=requestAnimationFrame(tick)}
+  rafId=requestAnimationFrame(tick)
+}
 
-  // ── live badge update loop ────────────────────────────────
-  function startRaf() {
-    if (rafId) return
-    const tick = () => {
-      updateBadges()
-      rafId = requestAnimationFrame(tick)
-    }
-    rafId = requestAnimationFrame(tick)
+// ─── video events ─────────────────────────────────────────
+video.addEventListener('loadedmetadata',()=>{
+  const vw=video.videoWidth, vh=video.videoHeight
+  const rect=video.getBoundingClientRect()
+  const hasBug = vw>vh && rect.height>rect.width
+  log(`loadedmetadata: videoWidth=${vw} videoHeight=${vh}`, hasBug?'err':'ok')
+  log(`  display: ${Math.round(rect.width)}×${Math.round(rect.height)}`, 'dim')
+  if(hasBug){
+    log(`⚠ iOS 16 方向 Bug！stream(${vw}×${vh})横向 vs display 竖向`, 'err')
+    log('  根因：UIProcess→WebProcess orientation IPC 竞争，m_deviceOrientation=0，旋转角=180°(UpsideDown)，宽高未交换', 'warn')
+  }
+  updateBadges()
+})
+video.addEventListener('resize',()=>{
+  log(`resize: ${video.videoWidth}×${video.videoHeight}`,'info')
+  updateBadges()
+})
+video.addEventListener('play',()=>log('play 事件','dim'))
+video.addEventListener('canplay',()=>log('canplay 事件','dim'))
+video.addEventListener('error',e=>log(`video error: ${e.message}`,'err'))
+
+// ─── fix: restart stream ──────────────────────────────────
+async function fixOrientation(){
+  if(orientationRetried){log('已重试过，跳过','warn');return}
+  orientationRetried=true
+  log('⚡ 修复中：停止当前流，等待 300ms 后重新请求…','warn')
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  video.srcObject=null
+  await new Promise(r=>setTimeout(r,300))
+  log('等待完毕，重新 getUserMedia…','warn')
+  await startCamera()
+}
+
+// ─── captureFrame math (mirrors functions.ts) ─────────────
+function doCaptureTest(){
+  const vw=video.videoWidth, vh=video.videoHeight
+  if(!vw||!vh){alert('没有视频流');return}
+
+  const scanEl = document.getElementById('scan-frame')
+  const scanRect = scanEl.getBoundingClientRect()
+  const videoRect = video.getBoundingClientRect()
+
+  const scaleX = videoRect.width/vw
+  const scaleY = videoRect.height/vh
+  const coverScale = Math.max(scaleX,scaleY)
+  const offX = (videoRect.width - vw*coverScale)/2
+  const offY = (videoRect.height - vh*coverScale)/2
+
+  const screenToVideo=(sx,sy)=>({x:(sx-offX)/coverScale, y:(sy-offY)/coverScale})
+
+  // mobile mode: full width, scan frame height ×1.16
+  const exp = 1.16
+  const expandH = (scanRect.height*(exp-1))/2
+  const frameTop  = scanRect.top  - videoRect.top
+  const frameBottom = scanRect.bottom - videoRect.top
+
+  const tl = screenToVideo(0, frameTop-expandH)
+  const br = screenToVideo(videoRect.width, frameBottom+expandH)
+  let sx=Math.max(0,tl.x), sy=Math.max(0,tl.y)
+  let ex=Math.min(vw,br.x), ey=Math.min(vh,br.y)
+  const sw=ex-sx, sh=ey-sy
+
+  const modelW=800, modelH=modelW*(sh/sw)
+
+  // ① raw
+  const cRaw = document.getElementById('c-raw')
+  cRaw.width=vw; cRaw.height=vh
+  cRaw.getContext('2d').drawImage(video,0,0)
+
+  // ② full + rotation fix
+  const cFull = document.getElementById('c-full')
+  const ctxFull = cFull.getContext('2d')
+  const streamPortrait=vh>vw, dispPortrait=videoRect.height>videoRect.width
+  if(streamPortrait!==dispPortrait){
+    cFull.width=vh; cFull.height=vw
+    ctxFull.translate(vh/2,vw/2)
+    ctxFull.rotate(dispPortrait?Math.PI/2:-Math.PI/2)
+    ctxFull.drawImage(video,-vw/2,-vh/2,vw,vh)
+  }else{
+    cFull.width=vw; cFull.height=vh
+    ctxFull.drawImage(video,0,0)
   }
 
-  // ── snapshot with orientation info ───────────────────────
-  function takeSnapshot() {
-    const vw = video.videoWidth
-    const vh = video.videoHeight
-    if (!vw || !vh) { log('无视频流，无法截图', 'err'); return }
+  // ③ crop (captureFrame style)
+  const cCrop = document.getElementById('c-crop')
+  cCrop.width=Math.round(modelW); cCrop.height=Math.round(modelH)
+  cCrop.getContext('2d').drawImage(video,sx,sy,sw,sh,0,0,modelW,modelH)
 
-    const rect  = video.getBoundingClientRect()
-    const hasBug = detectOrientationBug()
-    const displayIsPortrait = rect.height > rect.width
+  const infoEl = document.getElementById('crop-info-text')
+  infoEl.innerHTML=[
+    `videoWidth=${vw}  videoHeight=${vh}`,
+    `display: ${Math.round(videoRect.width)}×${Math.round(videoRect.height)}`,
+    `coverScale=${coverScale.toFixed(4)}  offX=${offX.toFixed(1)}  offY=${offY.toFixed(1)}`,
+    `scanFrame screen: top=${frameTop.toFixed(0)} bot=${frameBottom.toFixed(0)}`,
+    `crop in video coords: x=${sx.toFixed(0)},y=${sy.toFixed(0)} w=${sw.toFixed(0)} h=${sh.toFixed(0)}`,
+    `canvas(model): ${Math.round(modelW)}×${Math.round(modelH)}`,
+    `bug=${vw>vh&&dispPortrait?'YES ⚠':'NO ✓'}`,
+  ].join('\n')
 
-    // --- raw capture (直接 drawImage, 不做旋转) ---
-    const rawCanvas = document.createElement('canvas')
-    rawCanvas.width  = vw
-    rawCanvas.height = vh
-    rawCanvas.getContext('2d').drawImage(video, 0, 0)
+  log(`captureFrame: sx=${sx.toFixed(0)} sy=${sy.toFixed(0)} sw=${sw.toFixed(0)} sh=${sh.toFixed(0)} → canvas ${Math.round(modelW)}×${Math.round(modelH)}`,'info')
 
-    // --- corrected capture (检测到 bug 时补旋转) ---
-    const fixCanvas = document.createElement('canvas')
-    const fixCtx = fixCanvas.getContext('2d')
-    const streamIsPortrait = vh > vw
-    if (streamIsPortrait !== displayIsPortrait) {
-      fixCanvas.width  = vh
-      fixCanvas.height = vw
-      fixCtx.translate(vh / 2, vw / 2)
-      fixCtx.rotate(displayIsPortrait ? Math.PI / 2 : -Math.PI / 2)
-      fixCtx.drawImage(video, -vw / 2, -vh / 2, vw, vh)
-    } else {
-      fixCanvas.width  = vw
-      fixCanvas.height = vh
-      fixCtx.drawImage(video, 0, 0)
-    }
+  document.getElementById('crop-modal').style.display='flex'
+}
 
-    // render thumbnails
-    const addThumb = (srcCanvas, label) => {
-      const item = document.createElement('div')
-      item.className = 'snapshot-item'
-      const thumb = document.createElement('canvas')
-      thumb.width  = 80; thumb.height = 80
-      const tc = thumb.getContext('2d')
-      const scale = Math.min(80 / srcCanvas.width, 80 / srcCanvas.height)
-      const dw = srcCanvas.width  * scale
-      const dh = srcCanvas.height * scale
-      tc.drawImage(srcCanvas, (80 - dw) / 2, (80 - dh) / 2, dw, dh)
-      const lbl = document.createElement('div')
-      lbl.className = 'snapshot-label'
-      lbl.textContent = label
-      item.appendChild(thumb)
-      item.appendChild(lbl)
-      snapRow.insertBefore(item, snapRow.firstChild)
-    }
+// ─── vConsole ─────────────────────────────────────────────
+function v(key,val,cls='vc-val'){
+  const warn = typeof val==='string'&&(val.includes('⚠')||val.includes('异常'))
+  return `<div><span class="vc-key">${key}: </span><span class="${warn?'vc-val-warn':cls}">${val}</span></div>`
+}
+function section(label,...rows){
+  return `<div class="vc-section"><div class="vc-label">${label}</div>${rows.join('')}</div>`
+}
 
-    addThumb(rawCanvas, `raw ${vw}×${vh}`)
-    addThumb(fixCanvas, `fixed ${fixCanvas.width}×${fixCanvas.height}`)
+function renderVC(){
+  const vw=video.videoWidth, vh=video.videoHeight
+  const rect=video.getBoundingClientRect()
+  const track = stream?.getVideoTracks()[0]
+  const settings = track?.getSettings()
+  const caps = track?.getCapabilities?.()
+  const constr = track?.getConstraints?.()
+  const hasBug = vw>vh&&rect.height>rect.width
 
-    log(`📷 截图 raw=${vw}×${vh}  fixed=${fixCanvas.width}×${fixCanvas.height}  bug=${hasBug}`, 'info')
+  const tabs={
+    video:()=>[
+      section('HTMLVideoElement 核心',
+        v('videoWidth', vw||'—', vw&&vw>vh?'vc-val-warn':'vc-val'),
+        v('videoHeight', vh||'—', vh&&vw>vh?'vc-val-warn':'vc-val'),
+        v('readyState', ['HAVE_NOTHING(0)','HAVE_METADATA(1)','HAVE_CURRENT_DATA(2)','HAVE_FUTURE_DATA(3)','HAVE_ENOUGH_DATA(4)'][video.readyState]||video.readyState),
+        v('networkState', ['NETWORK_EMPTY(0)','NETWORK_IDLE(1)','NETWORK_LOADING(2)','NETWORK_NO_SOURCE(3)'][video.networkState]||video.networkState),
+        v('paused', video.paused),
+        v('muted', video.muted),
+        v('currentTime', video.currentTime.toFixed(2)+'s'),
+        v('duration', isNaN(video.duration)?'NaN':video.duration.toFixed(2)),
+        v('error', video.error?video.error.message:'null'),
+      ),
+      section('getBoundingClientRect',
+        v('width', rect.width.toFixed(2)),
+        v('height', rect.height.toFixed(2)),
+        v('top', rect.top.toFixed(2)),
+        v('left', rect.left.toFixed(2)),
+        v('aspect', (rect.width/rect.height).toFixed(4)+` (${rect.height>rect.width?'竖':'横'})`),
+      ),
+      section('object-fit cover 反算',
+        v('scaleX(rect.w/vw)', vw?(rect.width/vw).toFixed(4):'—'),
+        v('scaleY(rect.h/vh)', vh?(rect.height/vh).toFixed(4):'—'),
+        v('coverScale(max)', (vw&&vh)?Math.max(rect.width/vw,rect.height/vh).toFixed(4):'—'),
+        v('offsetX', (vw&&vh)?((rect.width-vw*Math.max(rect.width/vw,rect.height/vh))/2).toFixed(2):'—'),
+        v('offsetY', (vw&&vh)?((rect.height-vh*Math.max(rect.width/vw,rect.height/vh))/2).toFixed(2):'—'),
+      ),
+      section('Bug 诊断',
+        v('streamIsLandscape', vw>vh?`YES (${vw}>${vh}) ⚠`:'NO'),
+        v('displayIsPortrait', rect.height>rect.width?'YES':'NO'),
+        v('iOS16 Bug', hasBug?'⚠ 确认！宽高反转':'✓ 正常'),
+        v('修复建议', hasBug?'停止流，等300ms，重新getUserMedia':'无需修复'),
+      ),
+    ].join(''),
+
+    stream:()=> stream?[
+      section('MediaStream',
+        v('id', stream.id.slice(0,24)+'…'),
+        v('active', stream.active),
+        v('tracks', stream.getTracks().length),
+      ),
+      section('VideoTrack',
+        v('kind', track?.kind||'—'),
+        v('label', track?.label||'—'),
+        v('readyState', track?.readyState||'—'),
+        v('muted', track?.muted),
+        v('enabled', track?.enabled),
+        v('id', track?.id?.slice(0,24)+'…'||'—'),
+      ),
+      section('getSettings()',
+        v('width', settings?.width||'—'),
+        v('height', settings?.height||'—'),
+        v('frameRate', settings?.frameRate?.toFixed(2)||'—'),
+        v('facingMode', settings?.facingMode||'—'),
+        v('aspectRatio', settings?.aspectRatio?.toFixed(4)||'—'),
+        v('resizeMode', settings?.resizeMode||'—'),
+        v('deviceId', settings?.deviceId?.slice(0,20)+'…'||'—'),
+      ),
+      section('getConstraints()',
+        ...Object.entries(constr||{}).map(([k,val])=>v(k,JSON.stringify(val)))
+      ),
+      section('getCapabilities()',
+        ...(()=>{
+          if(!caps)return[v('注意','浏览器不支持 getCapabilities()')]
+          return Object.entries(caps).map(([k,val])=>v(k,JSON.stringify(val)))
+        })()
+      ),
+    ].join('') : '<div style="color:#6b7280;padding:8px">无流，请先启动摄像头</div>',
+
+    device:()=>[
+      section('Screen',
+        v('screen.width', screen.width),
+        v('screen.height', screen.height),
+        v('screen.availWidth', screen.availWidth),
+        v('screen.availHeight', screen.availHeight),
+        v('devicePixelRatio', window.devicePixelRatio),
+        v('colorDepth', screen.colorDepth),
+      ),
+      section('Window / Viewport',
+        v('innerWidth', window.innerWidth),
+        v('innerHeight', window.innerHeight),
+        v('outerWidth', window.outerWidth),
+        v('outerHeight', window.outerHeight),
+      ),
+      section('UserAgent',
+        `<div style="color:#d1fae5;word-break:break-all;line-height:1.5">${navigator.userAgent}</div>`
+      ),
+      section('Platform',
+        v('platform', navigator.platform),
+        v('language', navigator.language),
+        v('cookieEnabled', navigator.cookieEnabled),
+        v('maxTouchPoints', navigator.maxTouchPoints),
+        v('hardwareConcurrency', navigator.hardwareConcurrency),
+      ),
+      section('iOS 版本检测', (()=>{
+        const m=navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d*)/i)
+        if(!m)return v('iOS','非 iOS 设备')
+        const ver=`${m[1]}.${m[2]}${m[3]?'.'+m[3]:''}`
+        const major=parseInt(m[1])
+        return v('iOS Version', ver+(major===16?' ⚠ (Bug 区间)':major>=17?' ✓ (已修复)':' ✓'))
+      })()),
+    ].join(''),
+
+    orient:()=>[
+      section('screen.orientation',
+        v('type', screen.orientation?.type||'—'),
+        v('angle', screen.orientation?.angle??'—'),
+      ),
+      section('window.orientation (deprecated)',
+        v('value', typeof window.orientation!=='undefined'?window.orientation:'不支持'),
+        v('含义', (()=>{const o=window.orientation;return o===0?'竖 portrait':o===90?'横 landscape-left':o===-90?'横 landscape-right':o===180?'倒置 portrait':'—'})()),
+      ),
+      section('matchMedia',
+        v('portrait', window.matchMedia('(orientation:portrait)').matches),
+        v('landscape', window.matchMedia('(orientation:landscape)').matches),
+      ),
+      section('visualViewport',
+        v('width', window.visualViewport?.width?.toFixed(0)||'—'),
+        v('height', window.visualViewport?.height?.toFixed(0)||'—'),
+        v('scale', window.visualViewport?.scale||'—'),
+        v('offsetLeft', window.visualViewport?.offsetLeft||0),
+        v('offsetTop', window.visualViewport?.offsetTop||0),
+      ),
+    ].join(''),
   }
 
-  // ── buttons ───────────────────────────────────────────────
-  btnStart.addEventListener('click', () => startCamera())
-  btnStop .addEventListener('click', stopCamera)
-  btnRetry.addEventListener('click', () => {
-    orientationFixed = false
-    if (currentStream) {
-      currentStream.getTracks().forEach(t => t.stop())
-      currentStream = null
-    }
-    log('手动重新请求摄像头', 'warn')
-    startCamera()
-  })
-  btnSnap.addEventListener('click', takeSnapshot)
+  document.getElementById('vc-content').innerHTML = (tabs[vcTabActive]||tabs.video)()
+  document.getElementById('vc-updated').textContent='更新: '+new Date().toTimeString().slice(0,8)
+}
 
-  // ── init ─────────────────────────────────────────────────
-  log('页面加载完成，点击「启动摄像头」开始', 'dim')
-  log(`UA: ${navigator.userAgent.slice(0, 80)}`, 'dim')
-  log(`screen: ${screen.width}×${screen.height}  window: ${window.innerWidth}×${window.innerHeight}`, 'dim')
+// ─── toggle panels ────────────────────────────────────────
+let logVisible=false, vcVisible=false
+
+function toggleLog(){
+  logVisible=!logVisible
+  document.getElementById('log-wrap').style.display=logVisible?'flex':'none'
+}
+function toggleVC(){
+  vcVisible=!vcVisible
+  document.getElementById('vc-wrap').style.display=vcVisible?'flex':'none'
+  if(vcVisible){
+    renderVC()
+    vcTimer=setInterval(renderVC,2000)
+  }else{
+    clearInterval(vcTimer)
+  }
+}
+
+// ─── vConsole tabs ────────────────────────────────────────
+document.querySelectorAll('.vc-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.vc-tab').forEach(t=>t.classList.remove('active'))
+    tab.classList.add('active')
+    vcTabActive=tab.dataset.tab
+    renderVC()
+  })
+})
+
+// ─── button wiring ────────────────────────────────────────
+document.getElementById('btn-start').addEventListener('click',startCamera)
+document.getElementById('btn-stop').addEventListener('click',stopCamera)
+document.getElementById('btn-log').addEventListener('click',toggleLog)
+document.getElementById('btn-vc').addEventListener('click',toggleVC)
+document.getElementById('btn-crop-open').addEventListener('click',doCaptureTest)
+document.getElementById('btn-fix').addEventListener('click',fixOrientation)
+document.getElementById('btn-test-crop').addEventListener('click',doCaptureTest)
+document.getElementById('btn-close-crop').addEventListener('click',()=>{
+  document.getElementById('crop-modal').style.display='none'
+})
+
+// ─── init logs ────────────────────────────────────────────
+log(`UA: ${navigator.userAgent.slice(0,90)}`,'dim')
+log(`screen: ${screen.width}×${screen.height}  dpr: ${window.devicePixelRatio}  window: ${window.innerWidth}×${window.innerHeight}`,'dim')
+const iosM=navigator.userAgent.match(/OS (\d+)_/)
+if(iosM){
+  const v=parseInt(iosM[1])
+  log(`iOS ${iosM[1]} 检测到 ${v===16?'⚠ Bug 区间（16.x 有 35-46% 概率方向反转）':v>=17?'✓ iOS 17+ 已修复':'✓'}`
+    ,v===16?'warn':'ok')
+}
+// ─── 动态测量 controls 高度，避免遮挡 ────────────────
+function syncCtrlHeight(){
+  const h = document.getElementById('controls').getBoundingClientRect().height
+  document.documentElement.style.setProperty('--ctrl-h', h+'px')
+}
+syncCtrlHeight()
+window.addEventListener('resize', syncCtrlHeight)
+
+log('点击「▶ 启动」开始摄像头','dim')
+
+// ─── expose helpers to console for manual inspection ─────
+window.__debug = {
+  getVideo: ()=>video,
+  getStream: ()=>stream,
+  getTrack: ()=>stream?.getVideoTracks()[0],
+  getSettings: ()=>stream?.getVideoTracks()[0]?.getSettings(),
+  getCapabilities: ()=>stream?.getVideoTracks()[0]?.getCapabilities?.(),
+  getConstraints: ()=>stream?.getVideoTracks()[0]?.getConstraints?.(),
+  getBoundingRect: ()=>video.getBoundingClientRect(),
+  dims: ()=>({videoWidth:video.videoWidth,videoHeight:video.videoHeight}),
+}
+log('Eruda 加载中…可在 Console 里用 __debug.getSettings() 等查询属性','dim')
+</script>
+
+<!-- Eruda: 移动端全功能调试工具（Console / Elements / Network / Storage / Info） -->
+<script src="https://cdn.jsdelivr.net/npm/eruda@3/eruda.js"></script>
+<script>
+  eruda.init({
+    tool: ['console','elements','network','resources','info'],
+    useShadowDom: true,
+    autoRun: false,   // 不自动打开，点右下角 eruda 图标才展开
+  })
+
+  // 把有用的引用挂到 eruda console 里
+  const _d = window.__debug
+  console.info('[debug helpers]\n__debug.getSettings()\n__debug.getCapabilities()\n__debug.dims()\n__debug.getBoundingRect()')
 </script>
 </body>
 </html>
