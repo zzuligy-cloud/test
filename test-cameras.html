@@ -12,132 +12,139 @@
     position: relative;
     width: 100%;
     background: #000;
-    max-height: 55vw;
+    aspect-ratio: 16/9;
     overflow: hidden;
   }
-  video {
-    width: 100%;
-    display: block;
-    object-fit: cover;
-  }
+  video { width: 100%; height: 100%; display: block; object-fit: cover; }
+
   #overlay {
     position: absolute;
     top: 8px; left: 8px; right: 8px;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0,0,0,0.6);
     padding: 8px 10px;
     border-radius: 6px;
-    font-size: 12px;
-    line-height: 1.7;
+    font-size: 11px;
+    line-height: 1.8;
     pointer-events: none;
+    display: none;
   }
-  #overlay .label { color: #7ec8e3; font-weight: bold; }
-  #overlay .val  { color: #fff; }
+  #overlay .lbl { color: #7ec8e3; font-weight: bold; }
+  #overlay .val { color: #fff; }
 
-  #controls {
-    padding: 12px;
+  /* torch button on video */
+  #btn-torch {
+    position: absolute;
+    bottom: 10px; right: 10px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #555;
+    border-radius: 50%;
+    width: 44px; height: 44px;
+    font-size: 20px;
+    color: #fff;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s, border-color .2s;
   }
+  #btn-torch.on  { background: rgba(255,200,0,0.8); border-color: #ffcc00; }
+  #btn-torch.off { background: rgba(0,0,0,0.6); border-color: #555; }
+
+  #controls { padding: 12px; }
   h2 { font-size: 14px; color: #7ec8e3; margin-bottom: 8px; }
 
-  #camera-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 14px;
+  #btn-area { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  button {
+    flex: 1; min-width: 110px;
+    padding: 10px; border: none; border-radius: 8px;
+    font-size: 13px; cursor: pointer; font-weight: 600;
   }
+  #btn-start   { background: #2980b9; color: #fff; }
+  #btn-pref    { background: #27ae60; color: #fff; display: none; }
+  #btn-refresh { background: #333; color: #ccc; display: none; }
+
+  #camera-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+
   .cam-card {
     background: #1e1e1e;
     border: 1px solid #333;
     border-radius: 8px;
-    padding: 10px 12px;
+    padding: 10px 12px 10px 12px;
     cursor: pointer;
-    transition: border-color .15s;
     position: relative;
+    transition: border-color .15s;
   }
-  .cam-card.active  { border-color: #7ec8e3; background: #1a2e38; }
-  .cam-card.preferred { border-color: #27ae60; }
-  .cam-card.active.preferred { border-color: #2ecc71; background: #1a2e1a; }
-  .cam-card .cam-index { font-size: 11px; color: #888; margin-bottom: 2px; }
-  .cam-card .cam-label { font-size: 13px; color: #ddd; word-break: break-all; }
-  .cam-card .cam-id    { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
-  .cam-card .badge {
-    position: absolute; top: 8px; right: 8px;
-    font-size: 10px; padding: 2px 6px; border-radius: 10px;
-  }
-  .badge.front   { background: #2c3e50; color: #7ec8e3; }
-  .badge.back    { background: #2d3800; color: #a3e03a; }
-  .badge.unknown { background: #333; color: #aaa; }
-  .badge.preferred-badge { background: #1a4a1a; color: #2ecc71; }
+  .cam-card.active   { border-color: #7ec8e3; background: #1a2e38; }
+  .cam-card.pref     { border-color: #27ae60; }
+  .cam-card.active.pref { border-color: #2ecc71; background: #132813; }
+  .cam-card.no-label { opacity: .75; }
 
-  #btn-area { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-  button {
-    flex: 1;
-    min-width: 120px;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    font-weight: 600;
+  .cam-card .row1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
+  .cam-card .cam-idx  { font-size: 11px; color: #666; }
+  .cam-card .cam-name { font-size: 13px; color: #ddd; word-break: break-all; flex: 1; }
+  .cam-card .cam-id   { font-size: 10px; color: #555; word-break: break-all; }
+  .cam-card .cam-note { font-size: 10px; color: #888; font-style: italic; }
+
+  .badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 10px; white-space: nowrap;
   }
-  #btn-start    { background: #2980b9; color: #fff; }
-  #btn-preferred { background: #27ae60; color: #fff; }
-  #btn-refresh  { background: #333; color: #ccc; }
+  .badge.front   { background: #1c2f3e; color: #7ec8e3; }
+  .badge.back    { background: #1e2e00; color: #a3e03a; }
+  .badge.unknown { background: #2a2a2a; color: #888; }
+  .badge.pref-tag { background: #0d3b0d; color: #2ecc71; }
+  .badge.ios-tag  { background: #1e1a3a; color: #a78bfa; }
+  .badge.nolabel  { background: #2a2a2a; color: #f39c12; }
 
   #caps-box {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 14px;
+    background: #1a1a1a; border: 1px solid #333;
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: none;
   }
   #caps-box h3 { font-size: 12px; color: #888; margin-bottom: 8px; }
   .cap-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
   .cap-key { color: #888; }
-  .cap-val { color: #eee; text-align: right; max-width: 65%; word-break: break-all; }
+  .cap-val { color: #eee; text-align: right; max-width: 68%; word-break: break-all; }
 
   #log-box {
-    background: #0d0d0d;
-    border: 1px solid #222;
-    border-radius: 8px;
-    padding: 10px 12px;
-    max-height: 180px;
-    overflow-y: auto;
-    font-size: 11px;
-    line-height: 1.6;
+    background: #0d0d0d; border: 1px solid #222;
+    border-radius: 8px; padding: 10px 12px;
+    max-height: 200px; overflow-y: auto;
+    font-size: 11px; line-height: 1.65;
   }
-  .log-info  { color: #7ec8e3; }
-  .log-ok    { color: #2ecc71; }
-  .log-warn  { color: #f39c12; }
-  .log-err   { color: #e74c3c; }
-  .log-time  { color: #555; margin-right: 4px; }
+  .log-info { color: #7ec8e3; }
+  .log-ok   { color: #2ecc71; }
+  .log-warn { color: #f39c12; }
+  .log-err  { color: #e74c3c; }
+  .log-t    { color: #555; margin-right: 4px; }
 </style>
 </head>
 <body>
 
 <div id="preview-wrap">
   <video id="video" autoplay playsinline muted></video>
-  <div id="overlay" style="display:none">
-    <div><span class="label">Label: </span><span class="val" id="ov-label">—</span></div>
-    <div><span class="label">DeviceId: </span><span class="val" id="ov-id">—</span></div>
-    <div><span class="label">Resolution: </span><span class="val" id="ov-res">—</span></div>
-    <div><span class="label">FPS: </span><span class="val" id="ov-fps">—</span></div>
-    <div><span class="label">Zoom: </span><span class="val" id="ov-zoom">—</span></div>
-    <div><span class="label">Facing: </span><span class="val" id="ov-facing">—</span></div>
+  <div id="overlay">
+    <div><span class="lbl">Label: </span><span class="val" id="ov-label">—</span></div>
+    <div><span class="lbl">Resolution: </span><span class="val" id="ov-res">—</span></div>
+    <div><span class="lbl">FPS: </span><span class="val" id="ov-fps">—</span></div>
+    <div><span class="lbl">Facing: </span><span class="val" id="ov-facing">—</span></div>
+    <div><span class="lbl">Zoom: </span><span class="val" id="ov-zoom">—</span></div>
+    <div><span class="lbl">Torch: </span><span class="val" id="ov-torch">—</span></div>
   </div>
+  <!-- Torch button overlays the video -->
+  <button id="btn-torch" class="off" title="闪光灯">🔦</button>
 </div>
 
 <div id="controls">
   <div id="btn-area">
-    <button id="btn-start">▶ 启动相机 / 枚举</button>
-    <button id="btn-preferred" style="display:none">⭐ 切换到主摄 (camera2 1)</button>
-    <button id="btn-refresh" style="display:none">↻ 刷新列表</button>
+    <button id="btn-start">▶ 启动 &amp; 枚举</button>
+    <button id="btn-pref">⭐ 切换主摄</button>
+    <button id="btn-refresh">↻ 刷新列表</button>
   </div>
 
-  <h2>📷 检测到的相机列表</h2>
-  <div id="camera-list"><div style="color:#555;font-size:12px">点击"启动相机"后枚举</div></div>
+  <h2>📷 相机列表</h2>
+  <div id="camera-list"><div style="color:#555;font-size:12px">点击"启动 &amp; 枚举"后显示</div></div>
 
-  <div id="caps-box" style="display:none">
-    <h3>当前相机能力 (Capabilities)</h3>
+  <div id="caps-box">
+    <h3>当前相机能力 (Capabilities / Settings)</h3>
     <div id="caps-content"></div>
   </div>
 
@@ -146,27 +153,62 @@
 </div>
 
 <script>
-const video      = document.getElementById('video');
-const listEl     = document.getElementById('camera-list');
-const capsBox    = document.getElementById('caps-box');
-const capsContent= document.getElementById('caps-content');
-const overlay    = document.getElementById('overlay');
-const btnStart   = document.getElementById('btn-start');
-const btnPref    = document.getElementById('btn-preferred');
-const btnRefresh = document.getElementById('btn-refresh');
+const video       = document.getElementById('video');
+const listEl      = document.getElementById('camera-list');
+const capsBox     = document.getElementById('caps-box');
+const capsContent = document.getElementById('caps-content');
+const overlay     = document.getElementById('overlay');
+const btnStart    = document.getElementById('btn-start');
+const btnPref     = document.getElementById('btn-pref');
+const btnRefresh  = document.getElementById('btn-refresh');
+const btnTorch    = document.getElementById('btn-torch');
 
-let currentStream = null;
-let cameras = [];   // [{deviceId, label, groupId, facing, index}]
-let activeDeviceId = null;
+let currentStream    = null;
+let currentTrack     = null;
+let cameras          = [];        // enriched camera list
+let activeDeviceId   = null;
+let torchOn          = false;
+let torchSupported   = false;
 
-// ── helpers ────────────────────────────────────────────────────────────────
-function log(msg, type='info') {
+// ─── logging ────────────────────────────────────────────────────────────────
+function log(msg, type = 'info') {
   const box = document.getElementById('log-box');
-  const t = new Date().toLocaleTimeString('zh', { hour12: false });
-  const div = document.createElement('div');
-  div.innerHTML = `<span class="log-time">${t}</span><span class="log-${type}">${msg}</span>`;
-  box.appendChild(div);
+  const t   = new Date().toLocaleTimeString('zh', { hour12: false });
+  const d   = document.createElement('div');
+  d.innerHTML = `<span class="log-t">${t}</span><span class="log-${type}">${msg}</span>`;
+  box.appendChild(d);
   box.scrollTop = box.scrollHeight;
+}
+
+// ─── camera classification ───────────────────────────────────────────────────
+// iOS exposes virtual camera systems with Chinese labels when system lang = zh
+const IOS_CAMERA_MAP = [
+  // label pattern            → { type, desc, preferred, score (higher = more preferred for doc scan) }
+  { re: /后置相机$/,           type: 'ios-main',      desc: '主摄（单镜头）',       preferred: true,  score: 10 },
+  { re: /back camera$/i,      type: 'ios-main',      desc: 'Main camera',          preferred: true,  score: 10 },
+  { re: /后置双镜头/,          type: 'ios-dual',      desc: '主摄+长焦',            preferred: true,  score: 9  },
+  { re: /dual.*back/i,        type: 'ios-dual',      desc: 'Dual (main+tele)',      preferred: true,  score: 9  },
+  { re: /后置三镜头/,          type: 'ios-triple',    desc: '三摄系统（自动切换）',  preferred: true,  score: 8  },
+  { re: /triple.*back/i,      type: 'ios-triple',    desc: 'Triple system',         preferred: true,  score: 8  },
+  { re: /后置双广角/,          type: 'ios-dualwide',  desc: '主摄+超广角系统',       preferred: false, score: 5  },
+  { re: /dual.*wide/i,        type: 'ios-dualwide',  desc: 'Dual wide system',      preferred: false, score: 5  },
+  { re: /后置超广角/,          type: 'ios-ultra',     desc: '超广角镜头',            preferred: false, score: 3  },
+  { re: /ultra.*wide/i,       type: 'ios-ultra',     desc: 'Ultra wide',            preferred: false, score: 3  },
+  { re: /后置长焦/,            type: 'ios-tele',      desc: '长焦镜头',              preferred: false, score: 4  },
+  { re: /telephoto/i,         type: 'ios-tele',      desc: 'Telephoto',             preferred: false, score: 4  },
+  // Android camera2
+  { re: /camera2\s+1[,\s$]/i, type: 'android-main',  desc: '主摄（camera2 1）',    preferred: true,  score: 10 },
+  { re: /camera2\s+0[,\s$]/i, type: 'android-front', desc: '前置（camera2 0）',    preferred: false, score: 0  },
+  { re: /camera2\s+2[,\s$]/i, type: 'android-wide',  desc: '广角（camera2 2）',    preferred: false, score: 3  },
+  { re: /camera2\s+3[,\s$]/i, type: 'android-extra', desc: '附加镜头（camera2 3）',preferred: false, score: 2  },
+];
+
+function classifyCamera(label) {
+  if (!label) return { type: 'unknown', desc: '', preferred: false, score: 0 };
+  for (const entry of IOS_CAMERA_MAP) {
+    if (entry.re.test(label)) return entry;
+  }
+  return { type: 'unknown', desc: '', preferred: false, score: 0 };
 }
 
 function guessFacing(label) {
@@ -176,118 +218,209 @@ function guessFacing(label) {
   return 'unknown';
 }
 
-function isPreferred(label) {
-  // camera2 1, facing back → 通常是主摄
-  return /camera2\s+1[,\s]/i.test(label) || /camera2\s+1$/i.test(label);
-}
-
+// ─── stop stream ─────────────────────────────────────────────────────────────
 function stopStream() {
   if (currentStream) {
     currentStream.getTracks().forEach(t => t.stop());
     currentStream = null;
+    currentTrack  = null;
   }
+  torchOn = false;
+  updateTorchBtn();
 }
 
-// ── enumerate devices ───────────────────────────────────────────────────────
-async function enumerateCameras() {
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const videoDevices = devices.filter(d => d.kind === 'videoinput');
-  log(`共发现 ${videoDevices.length} 个视频设备`, 'ok');
+// ─── enumerate cameras ────────────────────────────────────────────────────────
+// After permission, labels are available. If not, we still show deviceId-based cards
+// and also patch labels from track.label where we know the active device.
+async function enumerateCameras(patchDeviceId, patchLabel) {
+  const devices     = await navigator.mediaDevices.enumerateDevices();
+  const videoDevs   = devices.filter(d => d.kind === 'videoinput');
+  log(`发现 ${videoDevs.length} 个视频设备`, 'ok');
 
-  cameras = videoDevices.map((d, i) => ({
-    deviceId: d.deviceId,
-    label: d.label || `Camera ${i}`,
-    groupId: d.groupId,
-    facing: guessFacing(d.label),
-    preferred: isPreferred(d.label),
-    index: i,
-  }));
+  cameras = videoDevs.map((d, i) => {
+    // patch: if this deviceId matches current track, use track.label (iOS gives label via track but not always via enumerate)
+    let label = d.label;
+    if (!label && patchDeviceId && d.deviceId === patchDeviceId && patchLabel) {
+      label = patchLabel;
+      log(`#${i} 通过 track.label 补全 label: ${patchLabel}`, 'info');
+    }
+    const cls    = classifyCamera(label);
+    const facing = guessFacing(label);
+    return {
+      deviceId: d.deviceId,
+      groupId:  d.groupId,
+      label,
+      hasLabel: !!label,
+      facing,
+      ...cls,
+      index: i,
+    };
+  });
+
+  // Pick the best preferred cam (highest score)
+  const bestPref = cameras
+    .filter(c => c.preferred && c.facing !== 'front')
+    .sort((a, b) => b.score - a.score)[0];
+  if (bestPref) bestPref.isBestPref = true;
 
   renderList();
 
   const hasPref = cameras.some(c => c.preferred);
-  btnPref.style.display = hasPref ? 'block' : 'none';
-  btnRefresh.style.display = 'block';
+  btnPref.style.display  = hasPref ? '' : 'none';
+  btnRefresh.style.display = '';
 }
 
-// ── render camera cards ─────────────────────────────────────────────────────
+// ─── render list ──────────────────────────────────────────────────────────────
 function renderList() {
   listEl.innerHTML = '';
-  if (cameras.length === 0) {
+  if (!cameras.length) {
     listEl.innerHTML = '<div style="color:#e74c3c;font-size:12px">未发现相机</div>';
     return;
   }
+
+  const noLabelCount = cameras.filter(c => !c.hasLabel).length;
+  if (noLabelCount > 0) {
+    const note = document.createElement('div');
+    note.style.cssText = 'font-size:11px;color:#f39c12;margin-bottom:8px;';
+    note.textContent   = `⚠️ ${noLabelCount} 个相机无 label（需授权后刷新才能显示名称）。当前通过 deviceId 切换。`;
+    listEl.appendChild(note);
+  }
+
   cameras.forEach(cam => {
     const card = document.createElement('div');
-    card.className = 'cam-card' + (cam.preferred ? ' preferred' : '') + (cam.deviceId === activeDeviceId ? ' active' : '');
-    card.dataset.deviceId = cam.deviceId;
+    const cls  = ['cam-card'];
+    if (cam.deviceId === activeDeviceId) cls.push('active');
+    if (cam.preferred) cls.push('pref');
+    if (!cam.hasLabel) cls.push('no-label');
+    card.className = cls.join(' ');
 
-    const shortId = cam.deviceId ? cam.deviceId.substring(0, 24) + '…' : '(需授权后显示)';
+    const shortId   = cam.deviceId ? cam.deviceId.substring(0, 28) + '…' : '(empty)';
+    const nameTxt   = cam.label || `Camera #${cam.index}（无 label）`;
+    const descBadge = cam.desc
+      ? `<span class="badge ios-tag">${cam.desc}</span>`
+      : '';
+    const prefBadge = cam.isBestPref
+      ? `<span class="badge pref-tag">⭐ 推荐</span>`
+      : cam.preferred ? `<span class="badge pref-tag">✓ 主摄</span>` : '';
+    const noLabelBadge = !cam.hasLabel
+      ? `<span class="badge nolabel">无label</span>`
+      : '';
+
     card.innerHTML = `
-      <div class="cam-index">#${cam.index}</div>
-      <div class="cam-label">${cam.label}</div>
+      <div class="row1">
+        <span class="cam-idx">#${cam.index}</span>
+        <span class="cam-name">${nameTxt}</span>
+        <span class="badge ${cam.facing}">${cam.facing}</span>
+        ${descBadge}${prefBadge}${noLabelBadge}
+      </div>
       <div class="cam-id">ID: ${shortId}</div>
-      <span class="badge ${cam.facing}">${cam.facing}</span>
-      ${cam.preferred ? '<span class="badge preferred-badge" style="top:30px">⭐ 主摄</span>' : ''}
+      ${cam.groupId ? `<div class="cam-note">Group: ${cam.groupId.substring(0, 28)}…</div>` : ''}
     `;
-    card.addEventListener('click', () => switchCamera(cam.deviceId, cam.label));
+    card.addEventListener('click', () => switchCamera(cam.deviceId, cam.label || `Camera #${cam.index}`));
     listEl.appendChild(card);
   });
 }
 
-// ── open camera by deviceId ─────────────────────────────────────────────────
-async function switchCamera(deviceId, label) {
-  log(`切换相机 → ${label || deviceId}`, 'info');
+// ─── switch camera ────────────────────────────────────────────────────────────
+async function switchCamera(deviceId, labelHint) {
+  log(`切换 → ${labelHint || deviceId}`, 'info');
   stopStream();
 
   const constraints = {
     video: deviceId
       ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-      : { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+      : { facingMode: 'environment',     width: { ideal: 1920 }, height: { ideal: 1080 } },
   };
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    currentStream = stream;
+    currentStream  = stream;
+    currentTrack   = stream.getVideoTracks()[0];
     video.srcObject = stream;
-    activeDeviceId = deviceId;
 
-    const track = stream.getVideoTracks()[0];
-    log(`已打开: ${track.label}`, 'ok');
+    const tLabel     = currentTrack.label;
+    const tDeviceId  = currentTrack.getSettings().deviceId || deviceId;
+    activeDeviceId   = tDeviceId;
 
-    await showCapabilities(track);
-    renderList();
+    log(`已打开: ${tLabel}`, 'ok');
+
+    // If the enumerated camera had no label, patch it now
+    const cam = cameras.find(c => c.deviceId === tDeviceId);
+    if (cam && !cam.hasLabel && tLabel) {
+      cam.label    = tLabel;
+      cam.hasLabel = true;
+      const cls    = classifyCamera(tLabel);
+      Object.assign(cam, cls);
+      log(`补全 label: ${tLabel}`, 'ok');
+    }
+
+    // Re-enumerate silently to pick up any new labels from other cameras
+    await enumerateCameras(tDeviceId, tLabel);
+
+    await showCapabilities(currentTrack);
     overlay.style.display = 'block';
-    updateOverlay(track, deviceId);
+    updateOverlay(currentTrack);
   } catch (err) {
     log(`打开失败: ${err.name} — ${err.message}`, 'err');
   }
 }
 
-// ── show capabilities ───────────────────────────────────────────────────────
+// ─── torch ────────────────────────────────────────────────────────────────────
+function updateTorchBtn() {
+  if (!torchSupported) {
+    btnTorch.style.display = 'none';
+    return;
+  }
+  btnTorch.style.display  = 'flex';
+  btnTorch.className      = torchOn ? 'on' : 'off';
+  btnTorch.title          = torchOn ? '关闭闪光灯' : '打开闪光灯';
+  btnTorch.textContent    = torchOn ? '💡' : '🔦';
+  document.getElementById('ov-torch').textContent = torchOn ? 'ON' : 'OFF';
+}
+
+async function toggleTorch() {
+  if (!currentTrack) return;
+  try {
+    torchOn = !torchOn;
+    await currentTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+    log(`闪光灯 ${torchOn ? '打开' : '关闭'}`, torchOn ? 'ok' : 'info');
+  } catch (e) {
+    log(`闪光灯失败: ${e.message}`, 'err');
+    torchOn = false;
+  }
+  updateTorchBtn();
+}
+
+btnTorch.addEventListener('click', toggleTorch);
+
+// ─── capabilities display ─────────────────────────────────────────────────────
 async function showCapabilities(track) {
   capsContent.innerHTML = '';
   capsBox.style.display = 'block';
 
-  const settings = track.getSettings();
+  const s    = track.getSettings();
   const caps = track.getCapabilities ? track.getCapabilities() : {};
 
+  // Detect torch support
+  torchSupported = !!(caps.torch);
+  updateTorchBtn();
+
   const rows = [
-    ['Label',       track.label],
-    ['Width',       settings.width],
-    ['Height',      settings.height],
-    ['FrameRate',   settings.frameRate ? settings.frameRate.toFixed(1) + ' fps' : '—'],
-    ['FacingMode',  settings.facingMode || '—'],
-    ['DeviceId',    settings.deviceId ? settings.deviceId.substring(0, 32) + '…' : '—'],
-    ['GroupId',     settings.groupId ? settings.groupId.substring(0, 32) + '…' : '—'],
+    ['Label',      track.label],
+    ['Width',      s.width],
+    ['Height',     s.height],
+    ['FrameRate',  s.frameRate ? s.frameRate.toFixed(1) + ' fps' : '—'],
+    ['FacingMode', s.facingMode || '—'],
+    ['DeviceId',   s.deviceId  ? s.deviceId.substring(0, 36) : '—'],
   ];
 
-  if (caps.zoom) rows.push(['Zoom range', `${caps.zoom.min?.toFixed(1)} – ${caps.zoom.max?.toFixed(1)} (step ${caps.zoom.step?.toFixed(2)})`]);
-  if (caps.focusMode) rows.push(['FocusModes', caps.focusMode.join(', ')]);
+  if (caps.zoom)             rows.push(['Zoom range',    `${caps.zoom.min?.toFixed(2)} – ${caps.zoom.max?.toFixed(2)}  (step ${caps.zoom.step?.toFixed(2)})`]);
+  if (caps.torch !== undefined) rows.push(['Torch',      caps.torch ? '✅ 支持' : '❌ 不支持']);
+  if (caps.focusMode)        rows.push(['FocusModes',   caps.focusMode.join(', ')]);
   if (caps.whiteBalanceMode) rows.push(['WhiteBalance', caps.whiteBalanceMode.join(', ')]);
-  if (caps.torch !== undefined) rows.push(['Torch', JSON.stringify(caps.torch)]);
-  if (caps.resizeMode) rows.push(['ResizeModes', caps.resizeMode.join(', ')]);
-  if (caps.aspectRatio) rows.push(['AspectRatio', `${caps.aspectRatio.min?.toFixed(2)} – ${caps.aspectRatio.max?.toFixed(2)}`]);
+  if (caps.exposureMode)     rows.push(['Exposure',     caps.exposureMode.join(', ')]);
+  if (caps.resizeMode)       rows.push(['ResizeModes',  caps.resizeMode.join(', ')]);
+  if (caps.aspectRatio)      rows.push(['AspectRatio',  `${caps.aspectRatio.min?.toFixed(2)} – ${caps.aspectRatio.max?.toFixed(2)}`]);
 
   rows.forEach(([k, v]) => {
     const div = document.createElement('div');
@@ -297,54 +430,91 @@ async function showCapabilities(track) {
   });
 }
 
-// ── update overlay while streaming ─────────────────────────────────────────
-function updateOverlay(track, deviceId) {
-  const settings = track.getSettings();
+// ─── overlay ──────────────────────────────────────────────────────────────────
+function updateOverlay(track) {
+  const s    = track.getSettings();
   const caps = track.getCapabilities ? track.getCapabilities() : {};
-
-  document.getElementById('ov-label').textContent   = track.label;
-  document.getElementById('ov-id').textContent      = deviceId ? deviceId.substring(0, 20) + '…' : '—';
-  document.getElementById('ov-res').textContent     = `${settings.width} × ${settings.height}`;
-  document.getElementById('ov-fps').textContent     = settings.frameRate ? settings.frameRate.toFixed(1) : '—';
-  document.getElementById('ov-facing').textContent  = settings.facingMode || guessFacing(track.label);
-  document.getElementById('ov-zoom').textContent    = caps.zoom
-    ? `min ${caps.zoom.min?.toFixed(1)} / max ${caps.zoom.max?.toFixed(1)}`
+  document.getElementById('ov-label').textContent  = track.label || '—';
+  document.getElementById('ov-res').textContent    = `${s.width} × ${s.height}`;
+  document.getElementById('ov-fps').textContent    = s.frameRate ? s.frameRate.toFixed(1) : '—';
+  document.getElementById('ov-facing').textContent = s.facingMode || guessFacing(track.label);
+  document.getElementById('ov-zoom').textContent   = caps.zoom
+    ? `${caps.zoom.min?.toFixed(1)} – ${caps.zoom.max?.toFixed(1)}`
     : '—';
+  document.getElementById('ov-torch').textContent  = torchSupported ? (torchOn ? 'ON' : 'OFF') : 'N/A';
 }
 
-// ── button handlers ─────────────────────────────────────────────────────────
+// ─── button handlers ──────────────────────────────────────────────────────────
 btnStart.addEventListener('click', async () => {
-  log('请求相机权限并枚举…', 'info');
+  log('请求权限 & 枚举相机…', 'info');
   try {
-    // First open any camera to get labels
-    const tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    const tmpTrack = tmp.getVideoTracks()[0];
-    log(`初始相机: ${tmpTrack.label}`, 'ok');
-    currentStream = tmp;
-    video.srcObject = tmp;
-    activeDeviceId = tmpTrack.getSettings().deviceId || null;
-    overlay.style.display = 'block';
-    updateOverlay(tmpTrack, activeDeviceId);
-    await showCapabilities(tmpTrack);
+    // Open environment camera first to unlock labels
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    currentStream  = stream;
+    currentTrack   = stream.getVideoTracks()[0];
+    video.srcObject = stream;
 
-    await enumerateCameras();
+    const tLabel    = currentTrack.label;
+    const tDeviceId = currentTrack.getSettings().deviceId || null;
+    activeDeviceId  = tDeviceId;
+
+    log(`初始相机: ${tLabel}`, 'ok');
+
+    await enumerateCameras(tDeviceId, tLabel);
+    await showCapabilities(currentTrack);
+    overlay.style.display = 'block';
+    updateOverlay(currentTrack);
     btnStart.textContent = '↻ 重新枚举';
   } catch (err) {
     log(`错误: ${err.name} — ${err.message}`, 'err');
+
+    // Even on error, try to enumerate without labels
+    try {
+      await enumerateCameras();
+    } catch (_) {}
   }
 });
 
 btnPref.addEventListener('click', () => {
-  const pref = cameras.find(c => c.preferred);
-  if (pref) switchCamera(pref.deviceId, pref.label);
-  else log('未找到 camera2 1 主摄', 'warn');
+  const best = cameras.filter(c => c.preferred && c.facing !== 'front').sort((a, b) => b.score - a.score)[0];
+  if (best) switchCamera(best.deviceId, best.label || `Camera #${best.index}`);
+  else log('未找到推荐主摄', 'warn');
 });
 
-btnRefresh.addEventListener('click', enumerateCameras);
+btnRefresh.addEventListener('click', () => {
+  const tLabel    = currentTrack?.label || null;
+  const tDeviceId = currentTrack?.getSettings().deviceId || activeDeviceId;
+  enumerateCameras(tDeviceId, tLabel);
+});
 
-// ── print basic environment info ────────────────────────────────────────────
-log(`UA: ${navigator.userAgent.substring(0, 80)}`, 'info');
+// ─── init log ─────────────────────────────────────────────────────────────────
+log(`UA: ${navigator.userAgent.substring(0, 100)}`, 'info');
 log(`mediaDevices: ${!!navigator.mediaDevices}`, navigator.mediaDevices ? 'ok' : 'err');
+
+// Enumerate immediately (will show cameras without labels if no permission yet)
+if (navigator.mediaDevices) {
+  navigator.mediaDevices.enumerateDevices().then(devs => {
+    const vids = devs.filter(d => d.kind === 'videoinput');
+    if (vids.length > 0) {
+      log(`预枚举：发现 ${vids.length} 个视频设备（无 label，点击启动后获取名称）`, 'warn');
+      cameras = vids.map((d, i) => ({
+        deviceId: d.deviceId,
+        groupId:  d.groupId,
+        label:    d.label || '',
+        hasLabel: !!d.label,
+        facing:   guessFacing(d.label),
+        type:     'unknown',
+        desc:     '',
+        preferred: false,
+        score:    0,
+        index:    i,
+      }));
+      renderList();
+    }
+  });
+}
 </script>
 </body>
 </html>
