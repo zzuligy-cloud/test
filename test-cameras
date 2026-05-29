@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Camera Switcher Test</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #111; color: #eee; font-family: -apple-system, monospace; font-size: 13px; }
+
+  #preview-wrap {
+    position: relative;
+    width: 100%;
+    background: #000;
+    max-height: 55vw;
+    overflow: hidden;
+  }
+  video {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+  }
+  #overlay {
+    position: absolute;
+    top: 8px; left: 8px; right: 8px;
+    background: rgba(0,0,0,0.55);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.7;
+    pointer-events: none;
+  }
+  #overlay .label { color: #7ec8e3; font-weight: bold; }
+  #overlay .val  { color: #fff; }
+
+  #controls {
+    padding: 12px;
+  }
+  h2 { font-size: 14px; color: #7ec8e3; margin-bottom: 8px; }
+
+  #camera-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .cam-card {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color .15s;
+    position: relative;
+  }
+  .cam-card.active  { border-color: #7ec8e3; background: #1a2e38; }
+  .cam-card.preferred { border-color: #27ae60; }
+  .cam-card.active.preferred { border-color: #2ecc71; background: #1a2e1a; }
+  .cam-card .cam-index { font-size: 11px; color: #888; margin-bottom: 2px; }
+  .cam-card .cam-label { font-size: 13px; color: #ddd; word-break: break-all; }
+  .cam-card .cam-id    { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
+  .cam-card .badge {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 10px; padding: 2px 6px; border-radius: 10px;
+  }
+  .badge.front   { background: #2c3e50; color: #7ec8e3; }
+  .badge.back    { background: #2d3800; color: #a3e03a; }
+  .badge.unknown { background: #333; color: #aaa; }
+  .badge.preferred-badge { background: #1a4a1a; color: #2ecc71; }
+
+  #btn-area { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  button {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  #btn-start    { background: #2980b9; color: #fff; }
+  #btn-preferred { background: #27ae60; color: #fff; }
+  #btn-refresh  { background: #333; color: #ccc; }
+
+  #caps-box {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+  #caps-box h3 { font-size: 12px; color: #888; margin-bottom: 8px; }
+  .cap-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .cap-key { color: #888; }
+  .cap-val { color: #eee; text-align: right; max-width: 65%; word-break: break-all; }
+
+  #log-box {
+    background: #0d0d0d;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 10px 12px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .log-info  { color: #7ec8e3; }
+  .log-ok    { color: #2ecc71; }
+  .log-warn  { color: #f39c12; }
+  .log-err   { color: #e74c3c; }
+  .log-time  { color: #555; margin-right: 4px; }
+</style>
+</head>
+<body>
+
+<div id="preview-wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <div id="overlay" style="display:none">
+    <div><span class="label">Label: </span><span class="val" id="ov-label">—</span></div>
+    <div><span class="label">DeviceId: </span><span class="val" id="ov-id">—</span></div>
+    <div><span class="label">Resolution: </span><span class="val" id="ov-res">—</span></div>
+    <div><span class="label">FPS: </span><span class="val" id="ov-fps">—</span></div>
+    <div><span class="label">Zoom: </span><span class="val" id="ov-zoom">—</span></div>
+    <div><span class="label">Facing: </span><span class="val" id="ov-facing">—</span></div>
+  </div>
+</div>
+
+<div id="controls">
+  <div id="btn-area">
+    <button id="btn-start">▶ 启动相机 / 枚举</button>
+    <button id="btn-preferred" style="display:none">⭐ 切换到主摄 (camera2 1)</button>
+    <button id="btn-refresh" style="display:none">↻ 刷新列表</button>
+  </div>
+
+  <h2>📷 检测到的相机列表</h2>
+  <div id="camera-list"><div style="color:#555;font-size:12px">点击"启动相机"后枚举</div></div>
+
+  <div id="caps-box" style="display:none">
+    <h3>当前相机能力 (Capabilities)</h3>
+    <div id="caps-content"></div>
+  </div>
+
+  <h2>📋 日志</h2>
+  <div id="log-box"></div>
+</div>
+
+<script>
+const video      = document.getElementById('video');
+const listEl     = document.getElementById('camera-list');
+const capsBox    = document.getElementById('caps-box');
+const capsContent= document.getElementById('caps-content');
+const overlay    = document.getElementById('overlay');
+const btnStart   = document.getElementById('btn-start');
+const btnPref    = document.getElementById('btn-preferred');
+const btnRefresh = document.getElementById('btn-refresh');
+
+let currentStream = null;
+let cameras = [];   // [{deviceId, label, groupId, facing, index}]
+let activeDeviceId = null;
+
+// ── helpers ────────────────────────────────────────────────────────────────
+function log(msg, type='info') {
+  const box = document.getElementById('log-box');
+  const t = new Date().toLocaleTimeString('zh', { hour12: false });
+  const div = document.createElement('div');
+  div.innerHTML = `<span class="log-time">${t}</span><span class="log-${type}">${msg}</span>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function guessFacing(label) {
+  const l = (label || '').toLowerCase();
+  if (l.includes('front') || l.includes('facing front') || l.includes('前置') || l.includes('user')) return 'front';
+  if (l.includes('back') || l.includes('facing back') || l.includes('后置') || l.includes('environment')) return 'back';
+  return 'unknown';
+}
+
+function isPreferred(label) {
+  // camera2 1, facing back → 通常是主摄
+  return /camera2\s+1[,\s]/i.test(label) || /camera2\s+1$/i.test(label);
+}
+
+function stopStream() {
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
+  }
+}
+
+// ── enumerate devices ───────────────────────────────────────────────────────
+async function enumerateCameras() {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const videoDevices = devices.filter(d => d.kind === 'videoinput');
+  log(`共发现 ${videoDevices.length} 个视频设备`, 'ok');
+
+  cameras = videoDevices.map((d, i) => ({
+    deviceId: d.deviceId,
+    label: d.label || `Camera ${i}`,
+    groupId: d.groupId,
+    facing: guessFacing(d.label),
+    preferred: isPreferred(d.label),
+    index: i,
+  }));
+
+  renderList();
+
+  const hasPref = cameras.some(c => c.preferred);
+  btnPref.style.display = hasPref ? 'block' : 'none';
+  btnRefresh.style.display = 'block';
+}
+
+// ── render camera cards ─────────────────────────────────────────────────────
+function renderList() {
+  listEl.innerHTML = '';
+  if (cameras.length === 0) {
+    listEl.innerHTML = '<div style="color:#e74c3c;font-size:12px">未发现相机</div>';
+    return;
+  }
+  cameras.forEach(cam => {
+    const card = document.createElement('div');
+    card.className = 'cam-card' + (cam.preferred ? ' preferred' : '') + (cam.deviceId === activeDeviceId ? ' active' : '');
+    card.dataset.deviceId = cam.deviceId;
+
+    const shortId = cam.deviceId ? cam.deviceId.substring(0, 24) + '…' : '(需授权后显示)';
+    card.innerHTML = `
+      <div class="cam-index">#${cam.index}</div>
+      <div class="cam-label">${cam.label}</div>
+      <div class="cam-id">ID: ${shortId}</div>
+      <span class="badge ${cam.facing}">${cam.facing}</span>
+      ${cam.preferred ? '<span class="badge preferred-badge" style="top:30px">⭐ 主摄</span>' : ''}
+    `;
+    card.addEventListener('click', () => switchCamera(cam.deviceId, cam.label));
+    listEl.appendChild(card);
+  });
+}
+
+// ── open camera by deviceId ─────────────────────────────────────────────────
+async function switchCamera(deviceId, label) {
+  log(`切换相机 → ${label || deviceId}`, 'info');
+  stopStream();
+
+  const constraints = {
+    video: deviceId
+      ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+      : { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+  };
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream = stream;
+    video.srcObject = stream;
+    activeDeviceId = deviceId;
+
+    const track = stream.getVideoTracks()[0];
+    log(`已打开: ${track.label}`, 'ok');
+
+    await showCapabilities(track);
+    renderList();
+    overlay.style.display = 'block';
+    updateOverlay(track, deviceId);
+  } catch (err) {
+    log(`打开失败: ${err.name} — ${err.message}`, 'err');
+  }
+}
+
+// ── show capabilities ───────────────────────────────────────────────────────
+async function showCapabilities(track) {
+  capsContent.innerHTML = '';
+  capsBox.style.display = 'block';
+
+  const settings = track.getSettings();
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+
+  const rows = [
+    ['Label',       track.label],
+    ['Width',       settings.width],
+    ['Height',      settings.height],
+    ['FrameRate',   settings.frameRate ? settings.frameRate.toFixed(1) + ' fps' : '—'],
+    ['FacingMode',  settings.facingMode || '—'],
+    ['DeviceId',    settings.deviceId ? settings.deviceId.substring(0, 32) + '…' : '—'],
+    ['GroupId',     settings.groupId ? settings.groupId.substring(0, 32) + '…' : '—'],
+  ];
+
+  if (caps.zoom) rows.push(['Zoom range', `${caps.zoom.min?.toFixed(1)} – ${caps.zoom.max?.toFixed(1)} (step ${caps.zoom.step?.toFixed(2)})`]);
+  if (caps.focusMode) rows.push(['FocusModes', caps.focusMode.join(', ')]);
+  if (caps.whiteBalanceMode) rows.push(['WhiteBalance', caps.whiteBalanceMode.join(', ')]);
+  if (caps.torch !== undefined) rows.push(['Torch', JSON.stringify(caps.torch)]);
+  if (caps.resizeMode) rows.push(['ResizeModes', caps.resizeMode.join(', ')]);
+  if (caps.aspectRatio) rows.push(['AspectRatio', `${caps.aspectRatio.min?.toFixed(2)} – ${caps.aspectRatio.max?.toFixed(2)}`]);
+
+  rows.forEach(([k, v]) => {
+    const div = document.createElement('div');
+    div.className = 'cap-row';
+    div.innerHTML = `<span class="cap-key">${k}</span><span class="cap-val">${v ?? '—'}</span>`;
+    capsContent.appendChild(div);
+  });
+}
+
+// ── update overlay while streaming ─────────────────────────────────────────
+function updateOverlay(track, deviceId) {
+  const settings = track.getSettings();
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+
+  document.getElementById('ov-label').textContent   = track.label;
+  document.getElementById('ov-id').textContent      = deviceId ? deviceId.substring(0, 20) + '…' : '—';
+  document.getElementById('ov-res').textContent     = `${settings.width} × ${settings.height}`;
+  document.getElementById('ov-fps').textContent     = settings.frameRate ? settings.frameRate.toFixed(1) : '—';
+  document.getElementById('ov-facing').textContent  = settings.facingMode || guessFacing(track.label);
+  document.getElementById('ov-zoom').textContent    = caps.zoom
+    ? `min ${caps.zoom.min?.toFixed(1)} / max ${caps.zoom.max?.toFixed(1)}`
+    : '—';
+}
+
+// ── button handlers ─────────────────────────────────────────────────────────
+btnStart.addEventListener('click', async () => {
+  log('请求相机权限并枚举…', 'info');
+  try {
+    // First open any camera to get labels
+    const tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const tmpTrack = tmp.getVideoTracks()[0];
+    log(`初始相机: ${tmpTrack.label}`, 'ok');
+    currentStream = tmp;
+    video.srcObject = tmp;
+    activeDeviceId = tmpTrack.getSettings().deviceId || null;
+    overlay.style.display = 'block';
+    updateOverlay(tmpTrack, activeDeviceId);
+    await showCapabilities(tmpTrack);
+
+    await enumerateCameras();
+    btnStart.textContent = '↻ 重新枚举';
+  } catch (err) {
+    log(`错误: ${err.name} — ${err.message}`, 'err');
+  }
+});
+
+btnPref.addEventListener('click', () => {
+  const pref = cameras.find(c => c.preferred);
+  if (pref) switchCamera(pref.deviceId, pref.label);
+  else log('未找到 camera2 1 主摄', 'warn');
+});
+
+btnRefresh.addEventListener('click', enumerateCameras);
+
+// ── print basic environment info ────────────────────────────────────────────
+log(`UA: ${navigator.userAgent.substring(0, 80)}`, 'info');
+log(`mediaDevices: ${!!navigator.mediaDevices}`, navigator.mediaDevices ? 'ok' : 'err');
+</script>
+</body>
+</html>
