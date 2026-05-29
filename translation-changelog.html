@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Translation Changelog — guardian-ekyc-solution</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; font-size: 14px; }
+  header { background: #1a1a2e; color: #fff; padding: 24px 32px; }
+  header h1 { font-size: 22px; margin-bottom: 4px; }
+  header .meta { font-size: 12px; color: #aaa; }
+  header .commit { font-family: monospace; color: #7ec8e3; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 24px; }
+  section { background: #fff; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  section h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; color: #1a1a2e; border-bottom: 2px solid #e8e8e8; padding-bottom: 10px; }
+  .section-subtitle { font-size: 12px; color: #888; font-family: monospace; margin-bottom: 16px; margin-top: 6px; }
+  .change-block { margin-bottom: 20px; }
+  .change-header { margin-bottom: 8px; }
+  .key-name { display: inline-block; font-family: monospace; font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 2px 8px; border-radius: 4px; color: #333; margin-right: 8px; }
+  .change-desc { font-size: 12px; color: #555; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f7f7f7; text-align: left; padding: 7px 10px; border-bottom: 2px solid #ddd; font-weight: 600; color: #444; }
+  td { padding: 6px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f9f9ff; }
+  .lang-cell { white-space: nowrap; font-weight: 500; color: #333; }
+  .key-cell { font-family: monospace; font-size: 11px; color: #777; white-space: nowrap; }
+  .before { color: #c0392b; background: #fff5f5; }
+  .after { color: #27ae60; background: #f0fff4; }
+  .warning { background: #fff3cd; border-left: 4px solid #f0ad4e; padding: 10px 16px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; }
+  footer { text-align: center; color: #999; font-size: 12px; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Translation Changelog — guardian-ekyc-solution</h1>
+  <div class="meta">
+    Commit: <span class="commit">016ff81</span> &nbsp;|&nbsp;
+    Branch: release/0.0.36 &nbsp;|&nbsp;
+    Date: 2026-05-28 &nbsp;|&nbsp;
+    Author: yangyang.guo &nbsp;|&nbsp;
+    Files: 153 locale files (51 langs × 3 packages)
+  </div>
+</header>
+<div class="container">
+  <p style="margin-bottom:16px;font-size:13px;color:#666;">
+    本次改动覆盖 51 种语言（ar/az/bg/bn/cs/da/de/el/en/es/et/fa/fi/fil/fr/ha/hi/hu/hy/id/it/ja/ka/kk/km/ko/lo/lt/lv/ms/my/nl/no/pl/pt/pt-br/ro/ru/sk/sr/sv/sw/th/tr/uk/ur/uz/vi/zh/zh-tw/zu），
+    分布于 packages/liveness、packages/document、packages/common 三个子包，共修正 36 个翻译键。
+  </p>
+
+  <section>
+    <h2>1. Liveness — 活体验证</h2>
+    <div class="section-subtitle">packages/liveness/locales/*.json</div>
+    
+    <div class="change-block">
+      <div class="change-header">
+        <span class="key-name">home.titleText</span>
+        <span class="change-desc">"Face Verification" → "Liveness Verification"（修正为活体验证的准确表达）</span>
+      </div>
+      <table>
+        <thead>
+          <tr><th style="width:160px">Language</th><th>Key</th><th>Before</th><th>After</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="lang-cell">Arabic (ar)</td><td class="key-cell">home.titleText</td><td class="before">التحقق من الوجه</td><td class="after">التحقق من الحيوية</td></tr>
+          <tr><td class="lang-cell">Azerbaijani (az)</td><td class="key-cell">home.titleText</td><td class="before">Üz Təsdiqi</td><td class="after">Canlılıq Yoxlaması</td></tr>
+          <tr><td class="lang-cell">Bulgarian (bg)</td><td class="key-cell">home.titleText</td><td class="before">Проверка на лице</td><td class="after">Проверка за жизненост</td></tr>
+          <tr><td class="lang-cell">Bengali (bn)</td><td class="key-cell">home.titleText</td><td class="before">মুখ যাচাইকরণ</td><td class="after">লাইভনেস যাচাইকরণ</td></tr>
+          <tr><td class="lang-cell">Czech (cs)</td><td class="key-cell">home.titleText</td><td class="before">Ověření obličeje</td><td class="after">Ověření živosti</td></tr>
+          <tr><td class="lang-cell">Danish (da)</td><td class="key-cell">home.titleText</td><td class="before">Ansigtsbekræftelse</td><td class="after">Levendehedsbekræftelse</td></tr>
+          <tr><td class="lang-cell">German (de)</td><td class="key-cell">home.titleText</td><td class="before">Gesichtserkennung</td><td class="after">Lebendnachweis</td></tr>
+          <tr><td class="lang-cell">Greek (el)</td><td class="key-cell">home.titleText</td><td class="before">Επαλήθευση προσώπου</td><td class="after">Επαλήθευση Ζωντανής Παρουσίας</td></tr>
+          <tr><td class="lang-cell">English (en)</td><td class="key-cell">home.titleText</td><td class="before">Face Verification</td><td class="after">Liveness Verification</td></tr>
+          <tr><td class="lang-cell">Spanish (es)</td><td class="key-cell">home.titleText</td><td class="before">Verificación facial</td><td class="after">Verificación de vida</td></tr>
+          <tr><td class="lang-cell">Estonian (et)</td><td class="key-cell">home.titleText</td><td class="before">Näo kinnitamine</td><td class="after">Elususkinnitamine</td></tr>
+          <tr><td class="lang-cell">Persian (fa)</td><td class="key-cell">home.titleText</td><td class="before">تأیید چهره</td><td class="after">تأیید زنده بودن</td></tr>
+          <tr><td class="lang-cell">Filipino (fil)</td><td class="key-cell">home.titleText</td><td class="before">Pag-verify ng Mukha</td><td class="after">Pagsusuri ng Buhay na Mukha</td></tr>
+          <tr><td class="lang-cell">French (fr)</td><td class="key-cell">home.titleText</td><td class="before">Vérification faciale</td><td class="after">Vérification de vivacité</td></tr>
+          <tr><td class="lang-cell">Hausa (ha)</td><td class="key-cell">home.titleText</td><td class="before">Tabbatar da Fuska</td><td class="after">Tabbatar da Rayuwa</td></tr>
+          <tr><td class="lang-cell">Hindi (hi)</td><td class="key-cell">home.titleText</td><td class="before">चेहरा सत्यापन</td><td class="after">लाइवनेस सत्यापन</td></tr>
+          <tr><td class="lang-cell">Hungarian (hu)</td><td class="key-cell">home.titleText</td><td class="before">Arcfelismerés</td><td class="after">Életjelenlét ellenőrzése</td></tr>
+          <tr><td class="lang-cell">Armenian (hy)</td><td class="key-cell">home.titleText</td><td class="before">Դեմքի ստուգում</td><td class="after">Կենդանության ստուգում</td></tr>
+          <tr><td class="lang-cell">Indonesian (id)</td><td class="key-cell">home.titleText</td><td class="before">Verifikasi Wajah</td><td class="after">Verifikasi Keaktifan</td></tr>
+          <tr><td class="lang-cell">Italian (it)</td><td class="key-cell">home.titleText</td><td class="before">Verifica del volto</td><td class="after">Verifica della vitalità</td></tr>
+          <tr><td class="lang-cell">Japanese (ja)</td><td class="key-cell">home.titleText</td><td class="before">生体認証</td><td class="after">顔の生体確認</td></tr>
+          <tr><td class="lang-cell">Georgian (ka)</td><td class="key-cell">home.titleText</td><td class="before">სახის დამოწმება</td><td class="after">სიცოცხლის ნიშნების შემოწმება</td></tr>
+          <tr><td class="lang-cell">Kazakh (kk)</td><td class="key-cell">home.titleText</td><td class="before">Бет-жүзді тексеру</td><td class="after">Тіршілік белгілерін тексеру</td></tr>
+          <tr><td class="lang-cell">Khmer (km)</td><td class="key-cell">home.titleText</td><td class="before">ការផ្ទៀងផ្ទាត់មុខ</td><td class="after">ការផ្ទៀងផ្ទាត់ភាពរស់នៅ</td></tr>
+          <tr><td class="lang-cell">Korean (ko)</td><td class="key-cell">home.titleText</td><td class="before">얼굴 인증</td><td class="after">얼굴 생체 인증</td></tr>
+          <tr><td class="lang-cell">Lao (lo)</td><td class="key-cell">home.titleText</td><td class="before">ການຢັ້ງຢືນໃບໜ້າ</td><td class="after">ການກວດສອບຄວາມມີຊີວິດ</td></tr>
+          <tr><td class="lang-cell">Lithuanian (lt)</td><td class="key-cell">home.titleText</td><td class="before">Veido patvirtinimas</td><td class="after">Gyvumo patvirtinimas</td></tr>
+          <tr><td class="lang-cell">Latvian (lv)</td><td class="key-cell">home.titleText</td><td class="before">Sejas verifikācija</td><td class="after">Dzīvās esātnes pārbaude</td></tr>
+          <tr><td class="lang-cell">Malay (ms)</td><td class="key-cell">home.titleText</td><td class="before">Pengesahan Wajah</td><td class="after">Pengesahan Kesahihan Wajah</td></tr>
+          <tr><td class="lang-cell">Burmese (my)</td><td class="key-cell">home.titleText</td><td class="before">မျက်နှာအတည်ပြုခြင်း</td><td class="after">မျက်နှာ အသက်ရှင်မှု စစ်ဆေးခြင်း</td></tr>
+          <tr><td class="lang-cell">Dutch (nl)</td><td class="key-cell">home.titleText</td><td class="before">Gezichtsverificatie</td><td class="after">Levendheidsverificatie</td></tr>
+          <tr><td class="lang-cell">Norwegian (no)</td><td class="key-cell">home.titleText</td><td class="before">Ansiktsverifisering</td><td class="after">Levendighetsverifisering</td></tr>
+          <tr><td class="lang-cell">Polish (pl)</td><td class="key-cell">home.titleText</td><td class="before">Weryfikacja twarzy</td><td class="after">Weryfikacja żywotności</td></tr>
+          <tr><td class="lang-cell">Portuguese (pt)</td><td class="key-cell">home.titleText</td><td class="before">Verificação facial</td><td class="after">Verificação de vivacidade</td></tr>
+          <tr><td class="lang-cell">Portuguese Brazil (pt-br)</td><td class="key-cell">home.titleText</td><td class="before">Verificação facial</td><td class="after">Verificação de vivacidade</td></tr>
+          <tr><td class="lang-cell">Romanian (ro)</td><td class="key-cell">home.titleText</td><td class="before">Verificare facială</td><td class="after">Verificare de vitalitate</td></tr>
+          <tr><td class="lang-cell">Russian (ru)</td><td class="key-cell">home.titleText</td><td class="before">Проверка лица</td><td class="after">Проверка живости</td></tr>
+          <tr><td class="lang-cell">Slovak (sk)</td><td class="key-cell">home.titleText</td><td class="before">Overenie tváre</td><td class="after">Overenie živosti</td></tr>
+          <tr><td class="lang-cell">Serbian (sr)</td><td class="key-cell">home.titleText</td><td class="before">Верификација лица</td><td class="after">Верификација живости</td></tr>
+          <tr><td class="lang-cell">Swedish (sv)</td><td class="key-cell">home.titleText</td><td class="before">Ansiktsverifiering</td><td class="after">Livlighetsverifiering</td></tr>
+          <tr><td class="lang-cell">Swahili (sw)</td><td class="key-cell">home.titleText</td><td class="before">Uthibitishaji wa uso</td><td class="after">Uthibitishaji wa Uhalisi</td></tr>
+          <tr><td class="lang-cell">Thai (th)</td><td class="key-cell">home.titleText</td><td class="before">การตรวจสอบใบหน้า</td><td class="after">การตรวจสอบความมีชีวิต</td></tr>
+          <tr><td class="lang-cell">Turkish (tr)</td><td class="key-cell">home.titleText</td><td class="before">Yüz Doğrulama</td><td class="after">Canlılık Doğrulama</td></tr>
+          <tr><td class="lang-cell">Ukrainian (uk)</td><td class="key-cell">home.titleText</td><td class="before">Верифікація обличчя</td><td class="after">Верифікація живої присутності</td></tr>
+          <tr><td class="lang-cell">Urdu (ur)</td><td class="key-cell">home.titleText</td><td class="before">چہرے کی تصدیق</td><td class="after">لائیونیس تصدیق</td></tr>
+          <tr><td class="lang-cell">Uzbek (uz)</td><td class="key-cell">home.titleText</td><td class="before">Yuz tekshiruvi</td><td class="after">Jonlilik tekshiruvi</td></tr>
+          <tr><td class="lang-cell">Vietnamese (vi)</td><td class="key-cell">home.titleText</td><td class="before">Xác minh khuôn mặt</td><td class="after">Xác minh khuôn mặt thật</td></tr>
+          <tr><td class="lang-cell">Chinese Simplified (zh)</td><td class="key-cell">home.titleText</td><td class="before">人脸验证</td><td class="after">活体验证</td></tr>
+          <tr><td class="lang-cell">Chinese Traditional (zh-tw)</td><td class="key-cell">home.titleText</td><td class="before">臉部驗證</td><td class="after">活體驗證</td></tr>
+          <tr><td class="lang-cell">Zulu (zu)</td><td class="key-cell">home.titleText</td><td class="before">Ukuqinisekiswa kobuso</td><td class="after">Ukuqinisekiswa Kokuphila</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<footer>Generated from git commit 016ff81 &mdash; guardian-ekyc-solution</footer>
+</body>
+</html>
